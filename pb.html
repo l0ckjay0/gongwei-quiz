@@ -1,0 +1,848 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=yes">
+    <title>智能排班排版系统 | 考勤表 + 节假日日历 + 永久存储</title>
+    <style>
+        * {
+            box-sizing: border-box;
+            user-select: none; /* 避免拖动文字影响点击，但不影响输入框 */
+        }
+
+        body {
+            font-family: 'Segoe UI', Roboto, 'Helvetica Neue', sans-serif;
+            background: #f0f2f5;
+            margin: 0;
+            padding: 20px;
+            color: #1e293b;
+        }
+
+        /* 主容器 */
+        .app-container {
+            max-width: 1600px;
+            margin: 0 auto;
+            background: white;
+            border-radius: 24px;
+            box-shadow: 0 20px 35px -12px rgba(0,0,0,0.1);
+            overflow: hidden;
+            transition: all 0.2s;
+        }
+
+        /* 头部控制区 */
+        .toolbar {
+            padding: 20px 24px;
+            background: white;
+            border-bottom: 1px solid #e2e8f0;
+            display: flex;
+            flex-wrap: wrap;
+            align-items: center;
+            justify-content: space-between;
+            gap: 16px;
+        }
+
+        .date-controls {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            background: #f8fafc;
+            padding: 5px 12px;
+            border-radius: 48px;
+            border: 1px solid #e2e8f0;
+        }
+
+        .date-controls button {
+            background: white;
+            border: none;
+            font-size: 1.3rem;
+            width: 32px;
+            height: 32px;
+            border-radius: 40px;
+            cursor: pointer;
+            font-weight: bold;
+            color: #2c3e66;
+            transition: all 0.2s;
+            box-shadow: 0 1px 2px rgba(0,0,0,0.05);
+        }
+
+        .date-controls button:hover {
+            background: #eef2ff;
+            transform: scale(0.96);
+        }
+
+        #yearMonthSelect {
+            font-size: 1.1rem;
+            font-weight: 600;
+            background: white;
+            border: none;
+            padding: 6px 8px;
+            border-radius: 32px;
+            cursor: pointer;
+            font-family: monospace;
+        }
+
+        .staff-manager {
+            display: flex;
+            gap: 12px;
+            align-items: center;
+            flex-wrap: wrap;
+        }
+
+        .staff-manager input {
+            padding: 8px 12px;
+            border-radius: 32px;
+            border: 1px solid #cbd5e1;
+            background: white;
+            font-size: 0.9rem;
+            outline: none;
+            transition: 0.2s;
+        }
+
+        .staff-manager input:focus {
+            border-color: #3b82f6;
+            box-shadow: 0 0 0 2px rgba(59,130,246,0.2);
+        }
+
+        .staff-manager button {
+            background: #3b82f6;
+            border: none;
+            color: white;
+            padding: 6px 16px;
+            border-radius: 32px;
+            font-weight: 500;
+            cursor: pointer;
+            transition: 0.2s;
+            box-shadow: 0 1px 2px rgba(0,0,0,0.05);
+        }
+
+        .staff-manager button:hover {
+            background: #2563eb;
+        }
+
+        .legend {
+            display: flex;
+            gap: 16px;
+            font-size: 0.75rem;
+            background: #f8fafc;
+            padding: 6px 14px;
+            border-radius: 40px;
+        }
+
+        .legend span {
+            display: inline-flex;
+            align-items: center;
+            gap: 6px;
+        }
+
+        /* 表格容器（滚动） */
+        .table-wrapper {
+            overflow-x: auto;
+            padding: 0 0 16px 0;
+            background: white;
+        }
+
+        /* 类表格布局 */
+        .roster-table {
+            min-width: 600px;
+            border-collapse: collapse;
+            width: 100%;
+            font-size: 0.85rem;
+            table-layout: fixed;
+        }
+
+        .roster-table th, .roster-table td {
+            border: 1px solid #e2edf2;
+            padding: 12px 6px;
+            text-align: center;
+            vertical-align: middle;
+            transition: background 0.1s;
+        }
+
+        /* 固定首列和首行视觉 */
+        .roster-table th {
+            background-color: #f9fbfd;
+            font-weight: 600;
+            color: #0f172a;
+            position: sticky;
+            top: 0;
+            background: #f1f5f9;
+            z-index: 2;
+        }
+
+        .roster-table th:first-child {
+            position: sticky;
+            left: 0;
+            background: #eef2ff;
+            z-index: 3;
+        }
+
+        .roster-table td:first-child {
+            position: sticky;
+            left: 0;
+            background: #fefce8;
+            font-weight: 600;
+            z-index: 1;
+            border-right: 2px solid #d1dbe8;
+        }
+
+        /* 人员首列美化 */
+        .staff-name {
+            font-weight: 700;
+            background: #fef9e3;
+        }
+
+        /* 单元格内只保留勾按钮 */
+        .cell-check {
+            display: flex;
+            justify-content: center;
+            align-items: center;
+        }
+
+        .check-btn {
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            cursor: pointer;
+            font-size: 1.5rem;
+            font-weight: bold;
+            width: 48px;
+            height: 48px;
+            border-radius: 32px;
+            transition: all 0.15s;
+            background: #f1f5f9;
+            border: 1px solid #cbd5e1;
+            user-select: none;
+            box-shadow: 0 1px 2px rgba(0,0,0,0.02);
+        }
+
+        .check-btn.active {
+            background: #22c55e;
+            color: white;
+            border-color: #15803d;
+            box-shadow: 0 2px 8px rgba(34,197,94,0.3);
+            transform: scale(0.98);
+        }
+
+        .check-btn:active {
+            transform: scale(0.92);
+        }
+
+        /* 节假日特殊样式 (背景柔和高亮) */
+        .holiday-cell {
+            background-color: #fff0f0 !important;
+            position: relative;
+        }
+        .weekend-cell {
+            background-color: #fef9e6 !important;
+        }
+        .holiday-name {
+            font-size: 0.6rem;
+            background: #dc2626;
+            color: white;
+            border-radius: 20px;
+            padding: 0px 6px;
+            display: inline-block;
+            margin-top: 2px;
+        }
+
+        /* 日期头显示节假日小图标 */
+        .date-header {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            gap: 4px;
+        }
+        .day-num {
+            font-weight: 700;
+            font-size: 1rem;
+        }
+        .weekday {
+            font-size: 0.7rem;
+            color: #475569;
+        }
+
+        .footer-note {
+            padding: 14px 24px;
+            background: #fafcff;
+            border-top: 1px solid #e2e8f0;
+            font-size: 0.75rem;
+            color: #334155;
+            text-align: center;
+        }
+
+        button.danger-btn {
+            background: #ef4444;
+            margin-left: 8px;
+        }
+        button.danger-btn:hover {
+            background: #dc2626;
+        }
+        .staff-item {
+            display: inline-flex;
+            align-items: center;
+            background: #eef2ff;
+            border-radius: 40px;
+            padding: 2px 8px 2px 12px;
+            gap: 8px;
+        }
+        .staff-badge {
+            font-weight: 500;
+        }
+        .remove-staff {
+            background: none;
+            border: none;
+            font-size: 1.1rem;
+            cursor: pointer;
+            color: #64748b;
+            font-weight: bold;
+            padding: 0 4px;
+            border-radius: 40px;
+            transition: 0.1s;
+        }
+        .remove-staff:hover {
+            color: #ef4444;
+            background: #fee2e2;
+        }
+        .staff-list {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 10px;
+            align-items: center;
+        }
+        /* 提示保存状态 */
+        .save-toast {
+            position: fixed;
+            bottom: 20px;
+            right: 20px;
+            background: #1e293b;
+            color: white;
+            padding: 8px 14px;
+            border-radius: 40px;
+            font-size: 0.75rem;
+            opacity: 0;
+            transition: opacity 0.2s;
+            pointer-events: none;
+            z-index: 999;
+        }
+    </style>
+</head>
+<body>
+<div class="app-container">
+    <div class="toolbar">
+        <div class="date-controls">
+            <button id="prevMonthBtn" title="上月">◀</button>
+            <select id="yearMonthSelect"></select>
+            <button id="nextMonthBtn" title="下月">▶</button>
+        </div>
+        <div class="staff-manager">
+            <input type="text" id="newStaffName" placeholder="新人员姓名 (例: 李芳)" maxlength="12">
+            <button id="addStaffBtn">➕ 添加人员</button>
+            <div class="legend">
+                <span>✅ <span style="color:#15803d">已签到(勾选)</span></span>
+                <span>📅 <span style="background:#fee2e2; padding:2px 6px; border-radius:16px;">节假日/周末背景</span></span>
+                <span>💾 <span style="color:#2563eb">数据自动保存</span></span>
+            </div>
+        </div>
+    </div>
+    <div class="table-wrapper">
+        <table class="roster-table" id="rosterTable">
+            <thead id="tableHeader">
+            <!-- 动态表头: 日期横排 -->
+            </thead>
+            <tbody id="tableBody">
+            <!-- 动态人员行，竖排名字 + 单元格勾选框 -->
+            </tbody>
+        </table>
+    </div>
+    <div class="footer-note">
+        ✨ 点击单元格内的 ✅ 按钮切换考勤标记 | 🎉 内置未来10年节假日（公历节日+周末）高亮显示 | 💾 所有排班数据自动保存在您的浏览器中，关闭页面再打开依然保留
+    </div>
+</div>
+<div id="saveToast" class="save-toast">✓ 已自动保存</div>
+
+<script>
+    // --------------------------------------------------------------
+    // 1. 持久化存储的键名
+    const STORAGE_KEY = 'SmartRosterData';
+    // 存储结构：{ staffList, stateMap, lastYear, lastMonth }
+    // stateMap 格式: { "2026_5": [ [day1_checked, day2_checked...], [person2...] ] } 
+    // 为了灵活且压缩，采用嵌套数组: stateMap[key][personIndex][dayIndex-1] = boolean (true=勾选)
+    // 注意原设计基于对象 day: {tick}，这里改为直接存储 bool 数组，更简洁。
+    // 但为了兼容之前动态天数，我们使用二维数组: stateMap[key] = [ person0CheckedArray, person1CheckedArray... ]
+    // 迁移时自动适配旧格式（如果有旧存储包含mid，会只取tick字段）
+    // --------------------------------------------------------------
+    
+    let staffList = ["胡斌", "苏志强"];    // 默认人员
+    let stateMap = {};        // 键 "2026_6" => 二维数组: [ [true/false 天数], [...] ]
+    let currentYear = 2026;
+    let currentMonth = 5;     // 0-11，默认6月（5=六月）
+    
+    // 辅助函数: 获取某年某月天数
+    function getDaysInMonth(year, month) {
+        return new Date(year, month + 1, 0).getDate();
+    }
+    
+    // 获取某年某月1号的星期几 (0周日 ~ 6周六)
+    function getFirstDayWeek(year, month) {
+        return new Date(year, month, 1).getDay();
+    }
+    
+    // ---------- 节假日引擎 (未来10年: 2024-2034，公历主要节日 + 周末) ----------
+    function getHolidayInfo(year, month, day) {
+        const date = new Date(year, month, day);
+        const week = date.getDay(); // 0周日 6周六
+        const isWeekend = (week === 0 || week === 6);
+        let holidayName = null;
+        // 元旦
+        if (month === 0 && day === 1) holidayName = "元旦";
+        // 劳动节
+        else if (month === 4 && day === 1) holidayName = "劳动节";
+        // 国庆节 10.1-10.3
+        else if (month === 9 && (day >= 1 && day <= 3)) holidayName = "国庆节";
+        // 清明节 (2024-2034)
+        else if (month === 3) {
+            let qingmingDay = 4;
+            if (year === 2024) qingmingDay = 4;
+            else if (year === 2025) qingmingDay = 4;
+            else if (year === 2026) qingmingDay = 5;
+            else if (year === 2027) qingmingDay = 5;
+            else if (year === 2028) qingmingDay = 4;
+            else if (year === 2029) qingmingDay = 4;
+            else if (year === 2030) qingmingDay = 5;
+            else if (year === 2031) qingmingDay = 5;
+            else if (year === 2032) qingmingDay = 4;
+            else if (year === 2033) qingmingDay = 4;
+            else if (year === 2034) qingmingDay = 5;
+            if (day === qingmingDay) holidayName = "清明";
+        }
+        // 端午节 (公历模拟)
+        else if (month === 5) {
+            let dragonDay = 18 + (year % 7);
+            if (dragonDay > 28) dragonDay = 22;
+            if (year === 2024) dragonDay = 10;
+            if (year === 2025) dragonDay = 31;
+            if (year === 2026) dragonDay = 19;
+            if (year === 2027) dragonDay = 9;
+            if (year === 2028) dragonDay = 28;
+            if (year === 2029) dragonDay = 18;
+            if (year === 2030) dragonDay = 7;
+            if (year === 2031) dragonDay = 27;
+            if (year === 2032) dragonDay = 15;
+            if (year === 2033) dragonDay = 4;
+            if (year === 2034) dragonDay = 23;
+            if (day === dragonDay) holidayName = "端午";
+        }
+        // 中秋节
+        else if (month === 8 || month === 9) {
+            let midAutumn = 15;
+            let targetMonth = 8;
+            if (year === 2024) { midAutumn = 17; targetMonth = 8; }
+            else if (year === 2025) { midAutumn = 6; targetMonth = 9; }
+            else if (year === 2026) { midAutumn = 15; targetMonth = 8; }
+            else if (year === 2027) { midAutumn = 15; targetMonth = 8; }
+            else if (year === 2028) { midAutumn = 3; targetMonth = 9; }
+            else if (year === 2029) { midAutumn = 22; targetMonth = 8; }
+            else if (year === 2030) { midAutumn = 12; targetMonth = 8; }
+            else if (year === 2031) { midAutumn = 1; targetMonth = 9; }
+            else if (year === 2032) { midAutumn = 19; targetMonth = 8; }
+            else if (year === 2033) { midAutumn = 8; targetMonth = 9; }
+            else if (year === 2034) { midAutumn = 27; targetMonth = 8; }
+            if (month === targetMonth && day === midAutumn) holidayName = "中秋";
+        }
+        let isHoliday = (holidayName !== null) || isWeekend;
+        return { isHoliday, holidayName, isWeekend };
+    }
+    
+    // 获取年月唯一键
+    function getYearMonthKey(year, month) {
+        return `${year}_${month}`;
+    }
+    
+    // ---------- 确保 stateMap 中某年月的数组存在并符合当前人员列表和天数 ----------
+    function ensureStateArray(year, month) {
+        const key = getYearMonthKey(year, month);
+        const daysCount = getDaysInMonth(year, month);
+        if (!stateMap[key]) {
+            // 初始化：为每个人员创建一个长度为 daysCount 的数组，默认 false
+            stateMap[key] = staffList.map(() => new Array(daysCount).fill(false));
+            return;
+        }
+        // 已有数据：检查维度是否匹配
+        let currentArr = stateMap[key];
+        // 人员数量不匹配: 增加或删除人员对应的行
+        if (currentArr.length !== staffList.length) {
+            const newArr = [];
+            for (let i = 0; i < staffList.length; i++) {
+                if (i < currentArr.length && Array.isArray(currentArr[i])) {
+                    // 保留原有数组，但天数可能变化
+                    let oldRow = currentArr[i];
+                    let newRow = new Array(daysCount).fill(false);
+                    for (let d = 0; d < Math.min(oldRow.length, daysCount); d++) {
+                        newRow[d] = !!oldRow[d];
+                    }
+                    newArr.push(newRow);
+                } else {
+                    // 新人员，全false
+                    newArr.push(new Array(daysCount).fill(false));
+                }
+            }
+            stateMap[key] = newArr;
+        } else {
+            // 人员数量相同，检查每一天长度是否匹配天数
+            let needUpdate = false;
+            for (let i = 0; i < staffList.length; i++) {
+                if (!stateMap[key][i] || stateMap[key][i].length !== daysCount) {
+                    needUpdate = true;
+                    break;
+                }
+            }
+            if (needUpdate) {
+                const newArr = [];
+                for (let i = 0; i < staffList.length; i++) {
+                    const oldRow = stateMap[key][i] || [];
+                    const newRow = new Array(daysCount).fill(false);
+                    for (let d = 0; d < Math.min(oldRow.length, daysCount); d++) {
+                        newRow[d] = !!oldRow[d];
+                    }
+                    newArr.push(newRow);
+                }
+                stateMap[key] = newArr;
+            }
+        }
+    }
+    
+    // 保存全部数据到 localStorage (包含 staffList, stateMap, 当前年月)
+    function persistData() {
+        try {
+            const toStore = {
+                staffList: staffList,
+                stateMap: stateMap,
+                lastYear: currentYear,
+                lastMonth: currentMonth,
+                version: 2   // 新版结构 (移除了mid)
+            };
+            localStorage.setItem(STORAGE_KEY, JSON.stringify(toStore));
+            // 显示短暂提示
+            const toast = document.getElementById('saveToast');
+            if (toast) {
+                toast.style.opacity = '1';
+                setTimeout(() => { toast.style.opacity = '0'; }, 800);
+            }
+        } catch(e) { console.warn("存储失败", e); }
+    }
+    
+    // 加载本地数据，如果存在且有效则恢复
+    function loadPersistedData() {
+        const raw = localStorage.getItem(STORAGE_KEY);
+        if (!raw) return false;
+        try {
+            const data = JSON.parse(raw);
+            if (data.staffList && Array.isArray(data.staffList) && data.staffList.length > 0) {
+                staffList = data.staffList;
+            }
+            if (data.stateMap && typeof data.stateMap === 'object') {
+                // 旧版本可能存储的是 {tick,mid} 对象结构，需要转换成新的 boolean 数组结构
+                // 检测 stateMap 内部形式: 如果某个 key 对应的 value 是数组且第一项是对象（含有tick字段），则迁移
+                let needConvert = false;
+                for (let key in data.stateMap) {
+                    const val = data.stateMap[key];
+                    if (Array.isArray(val) && val.length > 0 && val[0] && typeof val[0] === 'object' && val[0] !== null && ('tick' in val[0] || 'mid' in val[0])) {
+                        needConvert = true;
+                        break;
+                    }
+                }
+                if (needConvert) {
+                    // 迁移旧格式: 旧格式 stateMap[key][personIdx][dayNum] = { tick, mid } -> 转为新: boolean
+                    const newStateMap = {};
+                    for (let key in data.stateMap) {
+                        const oldMonthData = data.stateMap[key];
+                        if (!Array.isArray(oldMonthData)) continue;
+                        const [year, month] = key.split('_').map(Number);
+                        if (isNaN(year) || isNaN(month)) continue;
+                        const daysCount = getDaysInMonth(year, month);
+                        const newMonthArr = [];
+                        for (let pIdx = 0; pIdx < oldMonthData.length; pIdx++) {
+                            const oldPersonObj = oldMonthData[pIdx];
+                            const newRow = new Array(daysCount).fill(false);
+                            if (oldPersonObj && typeof oldPersonObj === 'object') {
+                                for (let dayStr in oldPersonObj) {
+                                    const dayNum = parseInt(dayStr);
+                                    if (!isNaN(dayNum) && dayNum >= 1 && dayNum <= daysCount) {
+                                        const oldVal = oldPersonObj[dayStr];
+                                        const tickVal = (oldVal && oldVal.tick === true);
+                                        newRow[dayNum-1] = tickVal;
+                                    }
+                                }
+                            }
+                            newMonthArr.push(newRow);
+                        }
+                        newStateMap[key] = newMonthArr;
+                    }
+                    stateMap = newStateMap;
+                } else {
+                    // 新版直接是 boolean 数组结构，直接使用（但要确保完整性）
+                    stateMap = data.stateMap;
+                    // 清理可能不符合维度的，在后续 ensure 中修正
+                }
+            }
+            if (typeof data.lastYear === 'number' && typeof data.lastMonth === 'number') {
+                currentYear = data.lastYear;
+                currentMonth = data.lastMonth;
+                // 边界限制 2024-2034
+                if (currentYear < 2024) currentYear = 2024;
+                if (currentYear > 2034) currentYear = 2034;
+                if (currentMonth < 0) currentMonth = 0;
+                if (currentMonth > 11) currentMonth = 11;
+            }
+            return true;
+        } catch(e) { console.warn("解析存储失败", e); return false; }
+    }
+    
+    // 更新某个单元格的勾选状态
+    function setCellChecked(year, month, personIdx, dayNum, checked) {
+        const key = getYearMonthKey(year, month);
+        ensureStateArray(year, month);   // 确保结构存在
+        const arr = stateMap[key];
+        if (arr && arr[personIdx] && dayNum >= 1 && dayNum <= arr[personIdx].length) {
+            arr[personIdx][dayNum-1] = checked;
+            persistData();      // 每次修改自动保存
+            renderTable();      // 刷新视图
+        }
+    }
+    
+    // 切换勾选状态
+    function toggleCellCheck(year, month, personIdx, dayNum) {
+        const key = getYearMonthKey(year, month);
+        ensureStateArray(year, month);
+        const currentVal = stateMap[key]?.[personIdx]?.[dayNum-1] || false;
+        setCellChecked(year, month, personIdx, dayNum, !currentVal);
+    }
+    
+    // 添加人员
+    function addStaff(name) {
+        if (!name || name.trim() === "") return false;
+        const trimmed = name.trim();
+        if (staffList.includes(trimmed)) {
+            alert("人员已存在");
+            return false;
+        }
+        staffList.push(trimmed);
+        // 对于所有已存在的年月，需要为新人员增加一行全false
+        for (let key in stateMap) {
+            const [year, month] = key.split('_').map(Number);
+            if (!isNaN(year) && !isNaN(month)) {
+                const daysCount = getDaysInMonth(year, month);
+                if (!stateMap[key]) stateMap[key] = [];
+                // 确保每个现有月份多一行
+                stateMap[key].push(new Array(daysCount).fill(false));
+            }
+        }
+        // 确保当前月份也同步
+        ensureStateArray(currentYear, currentMonth);
+        persistData();
+        renderTable();
+        return true;
+    }
+    
+    // 删除人员
+    function removeStaff(index) {
+        if (staffList.length <= 1) {
+            alert("至少保留一位人员");
+            return;
+        }
+        staffList.splice(index, 1);
+        // 删除所有月份中对应索引的人员数据
+        for (let key in stateMap) {
+            if (Array.isArray(stateMap[key]) && stateMap[key].length > index) {
+                stateMap[key].splice(index, 1);
+            }
+        }
+        persistData();
+        renderTable();
+    }
+    
+    // 渲染表格 (核心)
+    function renderTable() {
+        const daysCount = getDaysInMonth(currentYear, currentMonth);
+        ensureStateArray(currentYear, currentMonth);
+        const key = getYearMonthKey(currentYear, currentMonth);
+        const monthState = stateMap[key] || [];
+        
+        // 表头
+        const thead = document.getElementById('tableHeader');
+        let headerHtml = `<tr><th style="min-width: 100px;">人员 \\ 日期</th>`;
+        for (let d = 1; d <= daysCount; d++) {
+            const { isHoliday, holidayName } = getHolidayInfo(currentYear, currentMonth, d);
+            const weekNum = new Date(currentYear, currentMonth, d).getDay();
+            const weekStr = ['周日', '周一', '周二', '周三', '周四', '周五', '周六'][weekNum];
+            let holidayLabel = '';
+            if (holidayName) {
+                holidayLabel = `<span class="holiday-name">${holidayName}</span>`;
+            } else if (weekNum === 0 || weekNum === 6) {
+                holidayLabel = `<span class="holiday-name" style="background:#f97316;">周末</span>`;
+            }
+            headerHtml += `<th style="background:${(isHoliday ? '#fff0ea' : '#f8fafc')}">
+                            <div class="date-header">
+                                <span class="day-num">${d}</span>
+                                <span class="weekday">${weekStr}</span>
+                                ${holidayLabel}
+                            </div>
+                           </th>`;
+        }
+        headerHtml += `</tr>`;
+        thead.innerHTML = headerHtml;
+        
+        // 人员行
+        const tbody = document.getElementById('tableBody');
+        let bodyHtml = '';
+        for (let pIdx = 0; pIdx < staffList.length; pIdx++) {
+            const person = staffList[pIdx];
+            const rowChecks = monthState[pIdx] || new Array(daysCount).fill(false);
+            bodyHtml += `<tr>`;
+            bodyHtml += `<td class="staff-name" style="background:#fff4e0;">
+                            <div style="display:flex; justify-content:space-between; align-items:center; gap:6px;">
+                                <span>👤 ${person}</span>
+                                <button class="remove-staff" data-index="${pIdx}" title="删除人员" style="background:transparent; font-size:16px;">✖️</button>
+                            </div>
+                         </td>`;
+            for (let d = 1; d <= daysCount; d++) {
+                const isChecked = (rowChecks[d-1] === true);
+                const { isHoliday, isWeekend, holidayName } = getHolidayInfo(currentYear, currentMonth, d);
+                let cellClass = '';
+                if (isHoliday) cellClass = 'holiday-cell';
+                else if (isWeekend) cellClass = 'weekend-cell';
+                let titleAttr = holidayName ? ` title="假日:${holidayName}"` : (isWeekend ? ' title="周末"' : '');
+                bodyHtml += `<td class="${cellClass}"${titleAttr} style="padding:6px 4px;">
+                                <div class="cell-check">
+                                    <div class="check-btn ${isChecked ? 'active' : ''}" data-person="${pIdx}" data-day="${d}">✓</div>
+                                </div>
+                             </td>`;
+            }
+            bodyHtml += `</tr>`;
+        }
+        tbody.innerHTML = bodyHtml;
+        
+        // 绑定删除按钮事件
+        document.querySelectorAll('.remove-staff').forEach(btn => {
+            btn.removeEventListener('click', window._removeListener);
+            const handler = (e) => {
+                e.stopPropagation();
+                const idx = btn.getAttribute('data-index');
+                if (idx !== null) removeStaff(parseInt(idx));
+            };
+            btn.addEventListener('click', handler);
+            btn._handler = handler;
+        });
+        
+        // 绑定勾选按钮事件 (委托更稳妥，但直接绑定效率高)
+        attachCheckEvents();
+    }
+    
+    function attachCheckEvents() {
+        const container = document.getElementById('rosterTable');
+        if (!container) return;
+        // 移除旧监听避免重复
+        if (window._checkListener) {
+            container.removeEventListener('click', window._checkListener);
+        }
+        const clickHandler = (e) => {
+            const btn = e.target.closest('.check-btn');
+            if (!btn) return;
+            e.preventDefault();
+            const personIdx = btn.getAttribute('data-person');
+            const day = btn.getAttribute('data-day');
+            if (personIdx !== null && day !== null) {
+                toggleCellCheck(currentYear, currentMonth, parseInt(personIdx), parseInt(day));
+            }
+        };
+        container.addEventListener('click', clickHandler);
+        window._checkListener = clickHandler;
+    }
+    
+    // 年月选择逻辑及UI
+    function populateYearMonthSelect() {
+        const select = document.getElementById('yearMonthSelect');
+        select.innerHTML = '';
+        for (let y = 2024; y <= 2034; y++) {
+            for (let m = 1; m <= 12; m++) {
+                const option = document.createElement('option');
+                option.value = `${y}_${m-1}`;   // month 0-11
+                option.text = `${y}年 ${m}月`;
+                if (currentYear === y && currentMonth === (m-1)) option.selected = true;
+                select.appendChild(option);
+            }
+        }
+        select.addEventListener('change', (e) => {
+            const [year, month] = e.target.value.split('_').map(Number);
+            if (!isNaN(year) && !isNaN(month)) {
+                currentYear = year;
+                currentMonth = month;
+                ensureStateArray(currentYear, currentMonth);
+                renderTable();
+                persistData();   // 保存当前查看月份
+            }
+        });
+    }
+    
+    function changeMonth(delta) {
+        let newYear = currentYear;
+        let newMonth = currentMonth + delta;
+        if (newMonth < 0) {
+            newMonth = 11;
+            newYear--;
+        } else if (newMonth > 11) {
+            newMonth = 0;
+            newYear++;
+        }
+        if (newYear < 2024) newYear = 2024, newMonth = 0;
+        if (newYear > 2034) newYear = 2034, newMonth = 11;
+        if (newYear === currentYear && newMonth === currentMonth) return;
+        currentYear = newYear;
+        currentMonth = newMonth;
+        const select = document.getElementById('yearMonthSelect');
+        select.value = `${currentYear}_${currentMonth}`;
+        ensureStateArray(currentYear, currentMonth);
+        renderTable();
+        persistData();
+    }
+    
+    function initInteractions() {
+        document.getElementById('addStaffBtn').addEventListener('click', () => {
+            const input = document.getElementById('newStaffName');
+            const name = input.value.trim();
+            if (name) {
+                addStaff(name);
+                input.value = '';
+            } else {
+                alert("请输入姓名");
+            }
+        });
+        document.getElementById('prevMonthBtn').addEventListener('click', () => changeMonth(-1));
+        document.getElementById('nextMonthBtn').addEventListener('click', () => changeMonth(1));
+    }
+    
+    // 初始化主流程
+    function init() {
+        const loaded = loadPersistedData();
+        if (!loaded) {
+            // 初始默认数据: 为当前月份构造默认状态
+            staffList = ["胡斌", "苏志强"];
+            stateMap = {};
+        }
+        // 确保当前年月在有效范围
+        if (currentYear < 2024 || currentYear > 2034) {
+            const now = new Date();
+            currentYear = Math.min(2034, Math.max(2024, now.getFullYear()));
+            currentMonth = now.getMonth();
+        }
+        ensureStateArray(currentYear, currentMonth);
+        populateYearMonthSelect();
+        renderTable();
+        initInteractions();
+        persistData(); // 初次保存确保结构落盘
+    }
+    
+    init();
+</script>
+</body>
+</html>
