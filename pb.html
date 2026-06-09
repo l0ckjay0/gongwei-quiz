@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=yes, viewport-fit=cover">
-    <title>整月排班 | 胡·苏·接</title>
+    <title>排班 · 胡/苏/接 | 整月视图</title>
     <style>
         * {
             box-sizing: border-box;
@@ -12,9 +12,9 @@
 
         body {
             font-family: system-ui, -apple-system, 'Segoe UI', 'Roboto', 'Helvetica Neue', sans-serif;
-            background: #e9f0fa;
+            background: #eef3fc;
             margin: 0;
-            padding: 12px 10px 20px 10px;
+            padding: 12px 8px 24px 8px;
             color: #0b3954;
         }
 
@@ -23,7 +23,7 @@
             max-width: 650px;
             margin: 0 auto;
             background: #ffffff;
-            border-radius: 32px;
+            border-radius: 36px;
             box-shadow: 0 12px 28px rgba(0, 50, 80, 0.12);
             overflow: hidden;
             border: 1px solid #cde3f5;
@@ -35,16 +35,16 @@
             align-items: center;
             justify-content: space-between;
             background: #d9ebff;
-            padding: 12px 16px;
+            padding: 10px 14px;
             border-bottom: 1px solid #bdd8f0;
         }
         .nav-btn {
             background: #f0f7ff;
             border: none;
-            width: 48px;
-            height: 48px;
+            width: 46px;
+            height: 46px;
             border-radius: 30px;
-            font-size: 1.6rem;
+            font-size: 1.5rem;
             font-weight: 500;
             display: flex;
             align-items: center;
@@ -59,19 +59,19 @@
             transform: scale(0.94);
         }
         .month-year {
-            font-size: 1.35rem;
+            font-size: 1.3rem;
             font-weight: 700;
             background: #eef4fc;
-            padding: 8px 22px;
+            padding: 6px 20px;
             border-radius: 40px;
             color: #135e86;
         }
         .today-reset {
             background: #eef4fc;
             border: none;
-            padding: 8px 16px;
+            padding: 6px 14px;
             border-radius: 30px;
-            font-size: 0.8rem;
+            font-size: 0.75rem;
             font-weight: 600;
             color: #1a6d9e;
             cursor: pointer;
@@ -82,7 +82,7 @@
             display: grid;
             grid-template-columns: repeat(7, 1fr);
             background: #eef4fc;
-            padding: 10px 4px 8px;
+            padding: 8px 4px 6px;
             text-align: center;
             font-weight: 600;
             font-size: 0.75rem;
@@ -90,7 +90,7 @@
             border-bottom: 1px solid #d1e2f2;
         }
 
-        /* 日历网格 */
+        /* 日历网格 - 无横向滚动 */
         .calendar-grid {
             display: flex;
             flex-direction: column;
@@ -105,68 +105,68 @@
         }
         .day-cell {
             background: white;
-            padding: 6px 4px 5px;
+            padding: 8px 5px 6px;
             border-right: 1px solid #eaf0f7;
-            min-height: 100px;
+            min-height: 94px;
         }
         .day-cell:last-child {
             border-right: none;
         }
-        /* 日期数字 + 小字体节日 */
+        /* 日期数字区域：凸显设计 */
         .day-number {
-            font-weight: 700;
-            font-size: 0.85rem;
-            margin-bottom: 6px;
             display: flex;
             justify-content: space-between;
-            align-items: center;
+            align-items: baseline;
+            margin-bottom: 8px;
+            gap: 4px;
             flex-wrap: wrap;
-            gap: 3px;
         }
-        .num {
+        .date-num {
+            font-size: 1rem;
+            font-weight: 800;
+            color: #0f5b83;
             background: #eef3fc;
-            width: 26px;
-            height: 26px;
+            width: 30px;
+            height: 30px;
             display: inline-flex;
             align-items: center;
             justify-content: center;
-            border-radius: 20px;
-            font-size: 0.8rem;
-            font-weight: 600;
-            color: #135e86;
+            border-radius: 30px;
+            transition: 0.1s;
+            box-shadow: 0 1px 2px rgba(0,0,0,0.02);
         }
-        .weekend-num {
-            background: #c9e2f5;
-            color: #0f5b7a;
+        /* 周末日期数字更醒目 */
+        .weekend-date {
+            background: #cde5f5;
+            color: #0a4c6e;
+            font-weight: 800;
         }
-        /* 节假日字体小一号，蓝色柔和 */
-        .holiday-badge-mini {
+        /* 小节日标签 */
+        .holiday-mini {
             font-size: 0.58rem;
             background: #eef3fc;
-            padding: 2px 5px;
+            padding: 2px 6px;
             border-radius: 30px;
-            color: #4f7a9e;
+            color: #3f6e8f;
             white-space: nowrap;
             overflow-x: hidden;
             text-overflow: ellipsis;
-            max-width: 70px;
+            max-width: 68px;
             font-weight: 500;
         }
 
-        /* 排班区域：两个下拉框水平并排，无标签 */
-        .shift-row {
-            display: flex;
-            gap: 6px;
-            margin-top: 6px;
-            justify-content: space-between;
+        /* 单个下拉框区域 - 整洁无多余文字 */
+        .single-select {
+            margin-top: 5px;
+            width: 100%;
         }
-        .shift-select {
-            flex: 1;
+        .shift-dropdown {
+            width: 100%;
             background: white;
             border: 1px solid #bbd4f0;
-            border-radius: 24px;
-            padding: 6px 4px;
-            font-size: 0.7rem;
+            border-radius: 28px;
+            padding: 8px 6px;
+            font-size: 0.75rem;
             font-weight: 500;
             color: #0b4b6e;
             outline: none;
@@ -174,18 +174,23 @@
             text-align: center;
             font-family: inherit;
             transition: 0.1s;
-            min-width: 0;
+            appearance: none;
+            background-image: url('data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="%231f8bc5" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="6 9 12 15 18 9"></polyline></svg>');
+            background-repeat: no-repeat;
+            background-position: right 10px center;
+            background-size: 12px;
         }
-        .shift-select:focus {
+        .shift-dropdown:focus {
             border-color: #1f8bc5;
-            box-shadow: 0 0 0 1px #8bc9f0;
-        }
-        .empty-cell {
-            background: #fbfdff;
-            min-height: 100px;
+            box-shadow: 0 0 0 2px rgba(31,139,197,0.2);
         }
 
-        /* 底部提示 */
+        .empty-cell {
+            background: #fbfdff;
+            min-height: 94px;
+        }
+
+        /* 底部说明 */
         .info-bar {
             background: #eef4fc;
             padding: 10px 16px;
@@ -195,23 +200,24 @@
             border-top: 1px solid #d1e2f2;
         }
 
+        /* 确保任何宽度下都没有横向溢出 */
         @media (max-width: 550px) {
-            .shift-select {
-                font-size: 0.65rem;
-                padding: 5px 2px;
+            .date-num {
+                width: 26px;
+                height: 26px;
+                font-size: 0.85rem;
             }
-            .day-cell {
-                padding: 4px 2px;
-                min-height: 92px;
-            }
-            .num {
-                width: 24px;
-                height: 24px;
+            .shift-dropdown {
+                padding: 6px 4px;
                 font-size: 0.7rem;
             }
-            .holiday-badge-mini {
-                font-size: 0.55rem;
-                padding: 1px 4px;
+            .day-cell {
+                padding: 5px 3px;
+                min-height: 88px;
+            }
+            .holiday-mini {
+                font-size: 0.52rem;
+                max-width: 58px;
             }
             .weekdays {
                 font-size: 0.7rem;
@@ -239,32 +245,32 @@
         <!-- 动态渲染日历 -->
     </div>
     <div class="info-bar">
-        🔽 每个格子内两个下拉框（上:胡斌 / 下:苏志强）· 选项：「胡」「苏」「接」及占位符「−」<br>
-        📆 未来百年节日小字显示 · 数据自动保存本地 · 左右箭头切换月份
+        🔽 每个日期一个下拉框 · 选项：「无」「胡」「苏」「接」<br>
+        📆 未来百年节日(小字) · 数据自动保存到本地 · 左右切换月份 · 蓝色主题
     </div>
 </div>
 
 <script>
     // ---------- 配置 ----------
-    const STAFF_LIST = ["胡斌", "苏志强"];
-    // 下拉选项: 不含“未排”字样，占位符用“−”表示无排班
+    // 下拉选项：无（空值）、胡、苏、接  (移除了横线“-”)
     const SHIFT_OPTIONS = [
-        { value: "", label: "−" },
+        { value: "", label: "无" },
         { value: "胡", label: "胡" },
         { value: "苏", label: "苏" },
         { value: "接", label: "接" }
     ];
     const VALID_SHIFTS = ["胡", "苏", "接"];
 
-    // 存储结构: Map key = "胡斌_2026-06-10" , value = "胡"/"苏"/"接" 或 ""
-    let scheduleMap = new Map();
+    // 存储结构：单人员 key = "2026-06-10" , value = "胡"/"苏"/"接" 或 ""
+    let scheduleMap = new Map();   // key: YYYY-MM-DD, value: 班次字符串
 
     let currentYear = new Date().getFullYear();
     let currentMonth = new Date().getMonth() + 1;
 
     // ---------- 本地存储 ----------
+    const STORAGE_KEY = "shift_single_dropdown_no_hyphen";
     function loadFromLocalStorage() {
-        const stored = localStorage.getItem("shift_schedule_no_label");
+        const stored = localStorage.getItem(STORAGE_KEY);
         if (stored) {
             try {
                 const obj = JSON.parse(stored);
@@ -275,31 +281,31 @@
 
     function saveToLocalStorage() {
         const obj = Object.fromEntries(scheduleMap);
-        localStorage.setItem("shift_schedule_no_label", JSON.stringify(obj));
+        localStorage.setItem(STORAGE_KEY, JSON.stringify(obj));
     }
 
-    function getShift(year, month, day, staffName) {
-        const key = `${staffName}_${year}-${String(month).padStart(2,'0')}-${String(day).padStart(2,'0')}`;
-        return scheduleMap.get(key) || "";
+    function getShift(year, month, day) {
+        const dateKey = `${year}-${String(month).padStart(2,'0')}-${String(day).padStart(2,'0')}`;
+        return scheduleMap.get(dateKey) || "";
     }
 
-    function setShift(year, month, day, staffName, value) {
-        const key = `${staffName}_${year}-${String(month).padStart(2,'0')}-${String(day).padStart(2,'0')}`;
+    function setShift(year, month, day, value) {
+        const dateKey = `${year}-${String(month).padStart(2,'0')}-${String(day).padStart(2,'0')}`;
         if (!value || !VALID_SHIFTS.includes(value)) {
-            scheduleMap.delete(key);
+            scheduleMap.delete(dateKey);
         } else {
-            scheduleMap.set(key, value);
+            scheduleMap.set(dateKey, value);
         }
         saveToLocalStorage();
     }
 
     // 下拉变更处理
-    function onSelectChange(year, month, day, staffName, selectedValue) {
-        setShift(year, month, day, staffName, selectedValue);
+    function onSelectChange(year, month, day, selectedValue) {
+        setShift(year, month, day, selectedValue);
         renderMonthCalendar(currentYear, currentMonth);
     }
 
-    // ---------- 节假日引擎 (未来100年) ----------
+    // ---------- 节假日引擎 (未来100年 小字体节日) ----------
     function getHolidaysForDate(year, month, day) {
         const festivals = [];
         const monthDay = `${month}-${day}`;
@@ -312,7 +318,7 @@
         };
         if (fixed[monthDay]) festivals.push(...fixed[monthDay]);
 
-        // 传统节日近似
+        // 传统节日 (未来百年可见)
         if ((month === 1 && day >= 21) || (month === 2 && day <= 20)) festivals.push("春节");
         if (month === 2 && day >= 8 && day <= 25) festivals.push("元宵");
         if (month === 4) {
@@ -336,14 +342,14 @@
         return w === 0 || w === 6;
     }
 
-    // 构建下拉框HTML (无标签)
-    function buildSelect(currentValue, year, month, day, staffName) {
+    // 构建单个下拉框 (无任何额外文字标签，选项无横线)
+    function buildDropdown(currentValue, year, month, day) {
         let options = '';
         for (let opt of SHIFT_OPTIONS) {
             const selected = (opt.value === currentValue) ? 'selected' : '';
             options += `<option value="${opt.value}" ${selected}>${opt.label}</option>`;
         }
-        return `<select class="shift-select" data-year="${year}" data-month="${month}" data-day="${day}" data-staff="${staffName}">${options}</select>`;
+        return `<select class="shift-dropdown" data-year="${year}" data-month="${month}" data-day="${day}">${options}</select>`;
     }
 
     // 渲染整月日历
@@ -355,7 +361,7 @@
         document.getElementById("monthYearDisplay").innerText = `${year}年 ${monthNames[month-1]}`;
 
         const firstDayOfMonth = new Date(year, month-1, 1);
-        const startWeekday = firstDayOfMonth.getDay(); // 0周日
+        const startWeekday = firstDayOfMonth.getDay(); // 周日0
         const daysInMonth = new Date(year, month, 0).getDate();
 
         let weeks = [];
@@ -388,25 +394,24 @@
                 const cellMonth = month;
                 const weekendFlag = isWeekend(cellYear, cellMonth, dayNum);
                 const holidays = getHolidaysForDate(cellYear, cellMonth, dayNum);
-                const holidayHtml = holidays.length ? `<span class="holiday-badge-mini">${holidays[0]}${holidays[1] ? '·' + holidays[1] : ''}</span>` : '';
+                const holidayHtml = holidays.length ? `<span class="holiday-mini">${holidays[0]}${holidays[1] ? '·' + holidays[1] : ''}</span>` : '';
 
-                // 获取两个人员的班次值
-                const shiftHu = getShift(cellYear, cellMonth, dayNum, "胡斌");
-                const shiftSu = getShift(cellYear, cellMonth, dayNum, "苏志强");
+                // 获取当前日期的排班值
+                const currentShift = getShift(cellYear, cellMonth, dayNum);
+                // 生成下拉框
+                const dropdown = buildDropdown(currentShift, cellYear, cellMonth, dayNum);
 
-                // 生成两个下拉框 (无人员标签)
-                const huSelect = buildSelect(shiftHu, cellYear, cellMonth, dayNum, "胡斌");
-                const suSelect = buildSelect(shiftSu, cellYear, cellMonth, dayNum, "苏志强");
+                // 日期数字颜色凸显: 周末使用不同的背景色
+                const dateNumClass = weekendFlag ? "date-num weekend-date" : "date-num";
 
                 html += `
                     <div class="day-cell">
                         <div class="day-number">
-                            <span class="num ${weekendFlag ? 'weekend-num' : ''}">${dayNum}</span>
+                            <span class="${dateNumClass}">${dayNum}</span>
                             ${holidayHtml}
                         </div>
-                        <div class="shift-row">
-                            ${huSelect}
-                            ${suSelect}
+                        <div class="single-select">
+                            ${dropdown}
                         </div>
                     </div>
                 `;
@@ -415,8 +420,8 @@
         }
         grid.innerHTML = html;
 
-        // 绑定下拉事件
-        const selects = grid.querySelectorAll('.shift-select');
+        // 绑定下拉变更事件
+        const selects = grid.querySelectorAll('.shift-dropdown');
         selects.forEach(select => {
             select.removeEventListener('change', selectChangeHandler);
             select.addEventListener('change', selectChangeHandler);
@@ -428,9 +433,9 @@
         const year = parseInt(select.getAttribute('data-year'));
         const month = parseInt(select.getAttribute('data-month'));
         const day = parseInt(select.getAttribute('data-day'));
-        const staff = select.getAttribute('data-staff');
         const newValue = select.value;
-        setShift(year, month, day, staff, newValue);
+        setShift(year, month, day, newValue);
+        // 重新渲染当前月份以保持视图同步
         renderMonthCalendar(currentYear, currentMonth);
     }
 
@@ -472,7 +477,8 @@
         renderMonthCalendar(currentYear, currentMonth);
     }
 
-    function initAndBind() {
+    // 初始化
+    function init() {
         loadFromLocalStorage();
         const prevBtn = document.getElementById('prevMonthBtn');
         const nextBtn = document.getElementById('nextMonthBtn');
@@ -483,7 +489,7 @@
         renderMonthCalendar(currentYear, currentMonth);
     }
 
-    initAndBind();
+    init();
 </script>
 </body>
 </html>
