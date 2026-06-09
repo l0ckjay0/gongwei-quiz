@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=yes, viewport-fit=cover">
-    <title>整月排班 | 胡斌 · 苏志强</title>
+    <title>整月排班 | 胡·苏·接</title>
     <style>
         * {
             box-sizing: border-box;
@@ -105,10 +105,9 @@
         }
         .day-cell {
             background: white;
-            padding: 6px 3px 5px;
+            padding: 6px 4px 5px;
             border-right: 1px solid #eaf0f7;
-            min-height: 110px;
-            transition: all 0.05s;
+            min-height: 100px;
         }
         .day-cell:last-child {
             border-right: none;
@@ -117,7 +116,7 @@
         .day-number {
             font-weight: 700;
             font-size: 0.85rem;
-            margin-bottom: 4px;
+            margin-bottom: 6px;
             display: flex;
             justify-content: space-between;
             align-items: center;
@@ -140,7 +139,7 @@
             background: #c9e2f5;
             color: #0f5b7a;
         }
-        /* 节假日字体小一点 */
+        /* 节假日字体小一号，蓝色柔和 */
         .holiday-badge-mini {
             font-size: 0.58rem;
             background: #eef3fc;
@@ -154,56 +153,39 @@
             font-weight: 500;
         }
 
-        /* 人员排班区域 - 每个员工一行 + 下拉框 */
-        .staff-shifts {
-            margin-top: 6px;
+        /* 排班区域：两个下拉框水平并排，无标签 */
+        .shift-row {
             display: flex;
-            flex-direction: column;
             gap: 6px;
-        }
-        .staff-row-mini {
-            display: flex;
-            align-items: center;
+            margin-top: 6px;
             justify-content: space-between;
-            background: #f9fdfe;
-            border-radius: 20px;
-            padding: 4px 5px;
-            font-size: 0.7rem;
-            border: 1px solid #e2edf7;
         }
-        .staff-name-mini {
-            font-weight: 600;
-            color: #135e86;
-            min-width: 44px;
-            font-size: 0.7rem;
-        }
-        /* 下拉框样式 (蓝色主题) */
         .shift-select {
+            flex: 1;
             background: white;
             border: 1px solid #bbd4f0;
             border-radius: 24px;
-            padding: 5px 10px;
+            padding: 6px 4px;
             font-size: 0.7rem;
             font-weight: 500;
             color: #0b4b6e;
             outline: none;
             cursor: pointer;
-            width: 80px;
+            text-align: center;
             font-family: inherit;
             transition: 0.1s;
-            text-align: center;
+            min-width: 0;
         }
         .shift-select:focus {
             border-color: #1f8bc5;
             box-shadow: 0 0 0 1px #8bc9f0;
         }
-        /* 空单元格样式 */
         .empty-cell {
             background: #fbfdff;
-            min-height: 110px;
+            min-height: 100px;
         }
 
-        /* 底部信息 */
+        /* 底部提示 */
         .info-bar {
             background: #eef4fc;
             padding: 10px 16px;
@@ -215,17 +197,12 @@
 
         @media (max-width: 550px) {
             .shift-select {
-                width: 68px;
-                padding: 4px 6px;
                 font-size: 0.65rem;
-            }
-            .staff-name-mini {
-                font-size: 0.65rem;
-                min-width: 38px;
+                padding: 5px 2px;
             }
             .day-cell {
                 padding: 4px 2px;
-                min-height: 100px;
+                min-height: 92px;
             }
             .num {
                 width: 24px;
@@ -262,33 +239,32 @@
         <!-- 动态渲染日历 -->
     </div>
     <div class="info-bar">
-        🔽 下拉选择班次：「胡」「苏」「接」 — 自动保存至本地 · 整月视图，左右切换月份<br>
-        🎉 未来百年节日(小字显示) | 蓝色主题 | 再次点击下拉可修改
+        🔽 每个格子内两个下拉框（上:胡斌 / 下:苏志强）· 选项：「胡」「苏」「接」及占位符「−」<br>
+        📆 未来百年节日小字显示 · 数据自动保存本地 · 左右箭头切换月份
     </div>
 </div>
 
 <script>
     // ---------- 配置 ----------
     const STAFF_LIST = ["胡斌", "苏志强"];
-    // 下拉选项定义: 值 => 显示文本 (加上emoji可选)
+    // 下拉选项: 不含“未排”字样，占位符用“−”表示无排班
     const SHIFT_OPTIONS = [
-        { value: "", label: "▽ 未排" },
+        { value: "", label: "−" },
         { value: "胡", label: "胡" },
         { value: "苏", label: "苏" },
         { value: "接", label: "接" }
     ];
-    // 有效班次值集合 (用于存储)
     const VALID_SHIFTS = ["胡", "苏", "接"];
 
-    // 存储结构: Map key = "胡斌_2026-06-10" , value = "胡" / "苏" / "接" 或 null/空字符串
+    // 存储结构: Map key = "胡斌_2026-06-10" , value = "胡"/"苏"/"接" 或 ""
     let scheduleMap = new Map();
 
     let currentYear = new Date().getFullYear();
-    let currentMonth = new Date().getMonth() + 1; // 1-12
+    let currentMonth = new Date().getMonth() + 1;
 
     // ---------- 本地存储 ----------
     function loadFromLocalStorage() {
-        const stored = localStorage.getItem("shift_schedule_monthview_dropdown");
+        const stored = localStorage.getItem("shift_schedule_no_label");
         if (stored) {
             try {
                 const obj = JSON.parse(stored);
@@ -299,7 +275,7 @@
 
     function saveToLocalStorage() {
         const obj = Object.fromEntries(scheduleMap);
-        localStorage.setItem("shift_schedule_monthview_dropdown", JSON.stringify(obj));
+        localStorage.setItem("shift_schedule_no_label", JSON.stringify(obj));
     }
 
     function getShift(year, month, day, staffName) {
@@ -320,11 +296,10 @@
     // 下拉变更处理
     function onSelectChange(year, month, day, staffName, selectedValue) {
         setShift(year, month, day, staffName, selectedValue);
-        // 重新渲染当前月份，保持视图同步
         renderMonthCalendar(currentYear, currentMonth);
     }
 
-    // ---------- 节假日引擎 (未来100年 小字体节日) ----------
+    // ---------- 节假日引擎 (未来100年) ----------
     function getHolidaysForDate(year, month, day) {
         const festivals = [];
         const monthDay = `${month}-${day}`;
@@ -337,7 +312,7 @@
         };
         if (fixed[monthDay]) festivals.push(...fixed[monthDay]);
 
-        // 传统节日近似 (覆盖未来百年)
+        // 传统节日近似
         if ((month === 1 && day >= 21) || (month === 2 && day <= 20)) festivals.push("春节");
         if (month === 2 && day >= 8 && day <= 25) festivals.push("元宵");
         if (month === 4) {
@@ -351,7 +326,6 @@
         if (month === 10 && day >= 11 && day <= 31) festivals.push("重阳");
         if (month === 10 && day >= 1 && day <= 7 && festivals.includes("国庆节")) festivals.push("黄金周");
 
-        // 去重并最多返回2个，字体小
         const unique = [...new Set(festivals)];
         return unique.slice(0, 2);
     }
@@ -362,17 +336,26 @@
         return w === 0 || w === 6;
     }
 
-    // 渲染整月日历 (每个日期格子内两个下拉框)
+    // 构建下拉框HTML (无标签)
+    function buildSelect(currentValue, year, month, day, staffName) {
+        let options = '';
+        for (let opt of SHIFT_OPTIONS) {
+            const selected = (opt.value === currentValue) ? 'selected' : '';
+            options += `<option value="${opt.value}" ${selected}>${opt.label}</option>`;
+        }
+        return `<select class="shift-select" data-year="${year}" data-month="${month}" data-day="${day}" data-staff="${staffName}">${options}</select>`;
+    }
+
+    // 渲染整月日历
     function renderMonthCalendar(year, month) {
         const grid = document.getElementById("calendarGrid");
         if (!grid) return;
 
-        // 更新年月显示
         const monthNames = ['1月','2月','3月','4月','5月','6月','7月','8月','9月','10月','11月','12月'];
         document.getElementById("monthYearDisplay").innerText = `${year}年 ${monthNames[month-1]}`;
 
         const firstDayOfMonth = new Date(year, month-1, 1);
-        const startWeekday = firstDayOfMonth.getDay(); // 周日0
+        const startWeekday = firstDayOfMonth.getDay(); // 0周日
         const daysInMonth = new Date(year, month, 0).getDate();
 
         let weeks = [];
@@ -405,26 +388,15 @@
                 const cellMonth = month;
                 const weekendFlag = isWeekend(cellYear, cellMonth, dayNum);
                 const holidays = getHolidaysForDate(cellYear, cellMonth, dayNum);
-                const holidayHtml = holidays.length ? `<span class="holiday-badge-mini">${holidays[0]}${holidays[1] ? ' · ' + holidays[1] : ''}</span>` : '';
+                const holidayHtml = holidays.length ? `<span class="holiday-badge-mini">${holidays[0]}${holidays[1] ? '·' + holidays[1] : ''}</span>` : '';
 
-                // 获取当前两个人员的班次值
+                // 获取两个人员的班次值
                 const shiftHu = getShift(cellYear, cellMonth, dayNum, "胡斌");
                 const shiftSu = getShift(cellYear, cellMonth, dayNum, "苏志强");
 
-                // 生成下拉选项HTML函数
-                function buildSelectOptions(currentValue) {
-                    let opts = '';
-                    for (let opt of SHIFT_OPTIONS) {
-                        const selected = (opt.value === currentValue) ? 'selected' : '';
-                        opts += `<option value="${opt.value}" ${selected}>${opt.label}</option>`;
-                    }
-                    return opts;
-                }
-
-                // 胡斌下拉框
-                const huSelect = `<select class="shift-select" data-year="${cellYear}" data-month="${cellMonth}" data-day="${dayNum}" data-staff="胡斌">${buildSelectOptions(shiftHu)}</select>`;
-                // 苏志强下拉框
-                const suSelect = `<select class="shift-select" data-year="${cellYear}" data-month="${cellMonth}" data-day="${dayNum}" data-staff="苏志强">${buildSelectOptions(shiftSu)}</select>`;
+                // 生成两个下拉框 (无人员标签)
+                const huSelect = buildSelect(shiftHu, cellYear, cellMonth, dayNum, "胡斌");
+                const suSelect = buildSelect(shiftSu, cellYear, cellMonth, dayNum, "苏志强");
 
                 html += `
                     <div class="day-cell">
@@ -432,15 +404,9 @@
                             <span class="num ${weekendFlag ? 'weekend-num' : ''}">${dayNum}</span>
                             ${holidayHtml}
                         </div>
-                        <div class="staff-shifts">
-                            <div class="staff-row-mini">
-                                <span class="staff-name-mini">胡斌</span>
-                                ${huSelect}
-                            </div>
-                            <div class="staff-row-mini">
-                                <span class="staff-name-mini">苏志强</span>
-                                ${suSelect}
-                            </div>
+                        <div class="shift-row">
+                            ${huSelect}
+                            ${suSelect}
                         </div>
                     </div>
                 `;
@@ -449,7 +415,7 @@
         }
         grid.innerHTML = html;
 
-        // 绑定所有下拉变更事件
+        // 绑定下拉事件
         const selects = grid.querySelectorAll('.shift-select');
         selects.forEach(select => {
             select.removeEventListener('change', selectChangeHandler);
@@ -457,7 +423,6 @@
         });
     }
 
-    // 下拉变更统一处理器
     function selectChangeHandler(e) {
         const select = e.currentTarget;
         const year = parseInt(select.getAttribute('data-year'));
@@ -465,13 +430,11 @@
         const day = parseInt(select.getAttribute('data-day'));
         const staff = select.getAttribute('data-staff');
         const newValue = select.value;
-        // 更新存储
         setShift(year, month, day, staff, newValue);
-        // 重新刷新当前月份（保证数据同步以及其它格子不受影响，但会重新渲染所有格子，确保全部最新数据）
         renderMonthCalendar(currentYear, currentMonth);
     }
 
-    // 月份切换 (支持未来100年边界)
+    // 月份切换 (未来100年边界)
     function changeMonth(delta) {
         let newMonth = currentMonth + delta;
         let newYear = currentYear;
@@ -509,7 +472,6 @@
         renderMonthCalendar(currentYear, currentMonth);
     }
 
-    // 初始化和绑定导航事件
     function initAndBind() {
         loadFromLocalStorage();
         const prevBtn = document.getElementById('prevMonthBtn');
