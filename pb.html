@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=yes, viewport-fit=cover">
-    <title>移动排班助手 | 胡斌 & 苏志强</title>
+    <title>整月排班 | 胡斌 & 苏志强</title>
     <style>
         * {
             box-sizing: border-box;
@@ -11,276 +11,263 @@
         }
 
         body {
-            font-family: system-ui, -apple-system, 'Segoe UI', 'Roboto', 'Helvetica Neue', Helvetica, sans-serif;
-            background: #f5f7fb;
+            font-family: system-ui, -apple-system, 'Segoe UI', 'Roboto', 'Helvetica Neue', sans-serif;
+            background: #f4f7fc;
             margin: 0;
-            padding: 16px 12px 40px 12px;
-            color: #1e293b;
+            padding: 12px 10px 20px 10px;
+            color: #1e2f3e;
         }
 
-        .app-container {
-            max-width: 600px;
+        /* 主容器 */
+        .month-container {
+            max-width: 650px;
             margin: 0 auto;
-        }
-
-        .header {
-            margin-bottom: 20px;
-            text-align: center;
-        }
-        .header h1 {
-            font-size: 1.8rem;
-            font-weight: 600;
-            margin: 0 0 4px 0;
-            background: linear-gradient(135deg, #1e4a6b, #2c3e66);
-            background-clip: text;
-            -webkit-background-clip: text;
-            color: transparent;
-            letter-spacing: -0.3px;
-        }
-        .sub {
-            font-size: 0.8rem;
-            color: #5b6e8c;
-            border-top: 1px solid #e2e8f0;
-            display: inline-block;
-            padding-top: 6px;
-        }
-
-        /* 年月导航栏 */
-        .nav-bar {
             background: white;
             border-radius: 32px;
-            padding: 8px 12px;
+            box-shadow: 0 8px 20px rgba(0,0,0,0.05);
+            overflow: hidden;
+        }
+
+        /* 月份导航栏 */
+        .nav-header {
             display: flex;
             align-items: center;
             justify-content: space-between;
-            box-shadow: 0 2px 8px rgba(0, 0, 0, 0.03), 0 1px 2px rgba(0, 0, 0, 0.05);
-            margin-bottom: 20px;
+            background: #ffffff;
+            padding: 12px 16px;
+            border-bottom: 1px solid #eef2f8;
         }
         .nav-btn {
-            background: #f1f5f9;
+            background: #f0f4fa;
             border: none;
-            font-size: 1.6rem;
             width: 48px;
             height: 48px;
-            border-radius: 40px;
+            border-radius: 30px;
+            font-size: 1.6rem;
+            font-weight: 500;
             display: flex;
             align-items: center;
             justify-content: center;
             cursor: pointer;
-            transition: all 0.2s ease;
-            color: #2c3e66;
-            font-weight: 500;
-            box-shadow: 0 1px 1px rgba(0,0,0,0.05);
+            transition: all 0.2s;
+            color: #1f5a7e;
         }
         .nav-btn:active {
-            background: #e2e8f0;
-            transform: scale(0.96);
-        }
-        .date-picker {
-            display: flex;
-            gap: 12px;
-            background: #ffffff;
-            padding: 4px 12px;
-            border-radius: 40px;
-            align-items: center;
-        }
-        .date-picker select {
-            font-size: 1rem;
-            font-weight: 500;
-            padding: 8px 6px;
-            border: none;
-            background: transparent;
-            text-align: center;
-            color: #0f172a;
-            font-weight: 600;
-            outline: none;
-            cursor: pointer;
+            background: #e2e8f2;
+            transform: scale(0.94);
         }
         .month-year {
-            font-size: 1.2rem;
+            font-size: 1.35rem;
+            font-weight: 700;
+            background: #eef3fc;
+            padding: 8px 22px;
+            border-radius: 40px;
+            color: #144a6e;
+        }
+        .today-reset {
+            background: #eef3fc;
+            border: none;
+            padding: 8px 16px;
+            border-radius: 30px;
+            font-size: 0.8rem;
             font-weight: 600;
-            background: #eef2ff;
-            padding: 6px 16px;
-            border-radius: 32px;
-            color: #1e3a8a;
+            color: #1f5a7e;
+            cursor: pointer;
         }
 
-        /* 日期卡片列表 */
-        .schedule-list {
+        /* 星期表头 */
+        .weekdays {
+            display: grid;
+            grid-template-columns: repeat(7, 1fr);
+            background: #f9fbfe;
+            padding: 12px 4px 6px;
+            text-align: center;
+            font-weight: 600;
+            font-size: 0.8rem;
+            color: #5c6f87;
+            border-bottom: 1px solid #eef2f8;
+        }
+
+        /* 日期网格容器 - 允许纵向滚动 (整月必然需要滚动) */
+        .calendar-grid {
             display: flex;
             flex-direction: column;
-            gap: 16px;
+            max-height: 70vh;
+            overflow-y: auto;
+            background: white;
+        }
+        .week-row {
+            display: grid;
+            grid-template-columns: repeat(7, 1fr);
+            border-bottom: 1px solid #eff3f9;
+        }
+        .day-cell {
+            background: white;
+            padding: 8px 4px 6px;
+            border-right: 1px solid #f0f4fa;
+            min-height: 95px;
+            transition: all 0.05s;
+        }
+        .day-cell:last-child {
+            border-right: none;
+        }
+        /* 日期数字 & 节假日 */
+        .day-number {
+            font-weight: 700;
+            font-size: 0.9rem;
+            margin-bottom: 6px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            flex-wrap: wrap;
+            gap: 4px;
+        }
+        .num {
+            background: #f0f4f9;
+            width: 28px;
+            height: 28px;
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            border-radius: 20px;
+            font-size: 0.85rem;
+            font-weight: 600;
+            color: #1e3a5f;
+        }
+        .weekend-num {
+            background: #e6f2e6;
+            color: #2b6e3c;
+        }
+        .holiday-badge-mini {
+            font-size: 0.6rem;
+            background: #ffefe5;
+            padding: 2px 6px;
+            border-radius: 30px;
+            color: #b45f2b;
+            white-space: nowrap;
+            overflow-x: hidden;
+            text-overflow: ellipsis;
+            max-width: 70px;
         }
 
-        .day-card {
-            background: white;
-            border-radius: 28px;
-            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.05), 0 1px 2px rgba(0, 0, 0, 0.03);
-            overflow: hidden;
-            border: 1px solid #edf2f7;
-            transition: all 0.1s ease;
-        }
-        .card-header {
-            padding: 14px 18px 8px 18px;
-            border-bottom: 1px solid #f0f2f5;
-            background: #fefefe;
-        }
-        .date-info {
+        /* 人员排班区域 紧凑设计 */
+        .staff-shifts {
+            margin-top: 6px;
             display: flex;
-            flex-wrap: wrap;
-            align-items: baseline;
-            gap: 8px;
-            margin-bottom: 6px;
+            flex-direction: column;
+            gap: 6px;
         }
-        .date-num {
-            font-size: 1.45rem;
-            font-weight: 700;
-            color: #0f2b3d;
-        }
-        .weekday {
-            font-size: 0.85rem;
-            font-weight: 500;
-            color: #5b6e8c;
-            background: #f1f5f9;
-            padding: 4px 12px;
-            border-radius: 30px;
-        }
-        .weekend-badge {
-            background: #e6f7e6;
-            color: #2e7d32;
-        }
-        .holiday-tag {
-            background: #fee2e2;
-            color: #b91c1c;
+        .staff-row-mini {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            background: #fdfdfd;
+            border-radius: 20px;
+            padding: 4px 6px;
             font-size: 0.7rem;
-            padding: 4px 10px;
+            border: 1px solid #eff3f8;
+        }
+        .staff-name-mini {
+            font-weight: 600;
+            color: #2c4c6e;
+            min-width: 44px;
+            font-size: 0.7rem;
+        }
+        .shift-buttons-mini {
+            display: flex;
+            gap: 8px;
+        }
+        .shift-mini {
+            background: white;
+            border: 1px solid #dce5ef;
             border-radius: 30px;
+            padding: 3px 8px;
+            font-size: 0.7rem;
             font-weight: 500;
             display: inline-flex;
             align-items: center;
             gap: 4px;
+            cursor: pointer;
+            transition: 0.1s;
         }
-        .festival-list {
-            margin-top: 6px;
-            display: flex;
-            flex-wrap: wrap;
-            gap: 6px;
+        .shift-mini.active {
+            background: #1f6392;
+            border-color: #1f6392;
+            color: white;
+        }
+        .shift-mini .icon-small {
+            font-size: 0.75rem;
+        }
+        /* 空单元格样式 */
+        .empty-cell {
+            background: #fafcff;
+            min-height: 95px;
         }
 
-        /* 人员排班行 */
-        .staff-row {
-            padding: 14px 18px;
-            display: flex;
-            align-items: center;
-            justify-content: space-between;
-            border-bottom: 1px solid #f0f2f5;
-        }
-        .staff-row:last-child {
-            border-bottom: none;
-        }
-        .staff-name {
-            font-weight: 600;
-            font-size: 1.05rem;
-            min-width: 76px;
-            color: #1e2a3e;
-            letter-spacing: 0.5px;
-        }
-        .action-buttons {
-            display: flex;
-            gap: 20px;
-            background: #f8fafc;
-            padding: 6px 12px;
-            border-radius: 48px;
-        }
-        /* 排班操作框框 */
-        .shift-btn {
-            display: inline-flex;
-            align-items: center;
-            justify-content: center;
-            gap: 6px;
-            padding: 10px 20px;
-            border-radius: 60px;
-            font-size: 1.25rem;
-            font-weight: 500;
-            background: white;
-            border: 1.5px solid #e2e8f0;
-            cursor: pointer;
-            transition: all 0.2s ease;
-            min-width: 78px;
-            box-shadow: 0 1px 1px rgba(0,0,0,0.02);
-        }
-        .shift-btn.active {
-            background: #2c6e9e;
-            border-color: #2c6e9e;
-            color: white;
-            box-shadow: 0 4px 8px rgba(44,110,158,0.2);
-        }
-        .shift-icon {
-            font-size: 1.3rem;
-            font-weight: 600;
-        }
-        .shift-text {
-            font-size: 1rem;
-            font-weight: 500;
-        }
-        .empty-note {
+        /* 底部说明 */
+        .info-bar {
+            background: #f8fbfe;
+            padding: 10px 16px;
+            font-size: 0.65rem;
+            color: #6d8aac;
             text-align: center;
-            padding: 40px 20px;
-            background: white;
-            border-radius: 32px;
-            color: #6c86a3;
+            border-top: 1px solid #eef2f8;
         }
-        .info-note {
-            background: #eef2ff;
-            border-radius: 24px;
-            padding: 12px 16px;
-            margin-top: 24px;
-            text-align: center;
-            font-size: 0.7rem;
-            color: #334155;
+
+        @media (max-width: 550px) {
+            .shift-mini {
+                padding: 2px 5px;
+                font-size: 0.65rem;
+            }
+            .staff-name-mini {
+                font-size: 0.65rem;
+                min-width: 38px;
+            }
+            .day-cell {
+                padding: 4px 2px;
+                min-height: 88px;
+            }
+            .num {
+                width: 24px;
+                height: 24px;
+                font-size: 0.75rem;
+            }
+            .holiday-badge-mini {
+                font-size: 0.55rem;
+                padding: 1px 4px;
+            }
+            .weekdays {
+                font-size: 0.7rem;
+            }
         }
-        @media (max-width: 480px) {
-            body { padding: 12px 10px 30px 10px; }
-            .shift-btn { padding: 8px 14px; min-width: 68px; }
-            .staff-name { font-size: 1rem; min-width: 70px; }
-            .action-buttons { gap: 12px; }
-            .date-num { font-size: 1.3rem; }
+        /* 点击反馈 */
+        .shift-mini:active {
+            transform: scale(0.94);
         }
-        button { background: none; border: none; font-family: inherit; }
-        .footer-meta {
-            font-size: 0.7rem;
-            text-align: center;
-            margin-top: 24px;
-            color: #7e8b9e;
+        button {
+            font-family: inherit;
         }
     </style>
 </head>
 <body>
-<div class="app-container">
-    <div class="header">
-        <h1>📅 智能排班簿</h1>
-        <div class="sub">胡斌 · 苏志强 ｜ 勾 ✔️ 与 中 🀆 ｜ 数据自动保存</div>
+<div class="month-container">
+    <div class="nav-header">
+        <button class="nav-btn" id="prevMonthBtn">←</button>
+        <div class="month-year" id="monthYearDisplay">----年--月</div>
+        <button class="today-reset" id="todayBtn">📅 今日</button>
+        <button class="nav-btn" id="nextMonthBtn">→</button>
     </div>
 
-    <div class="nav-bar">
-        <button class="nav-btn" id="prevMonthBtn" aria-label="上个月">←</button>
-        <div class="date-picker">
-            <select id="yearSelect"></select>
-            <select id="monthSelect"></select>
-        </div>
-        <button class="nav-btn" id="nextMonthBtn" aria-label="下个月">→</button>
+    <div class="weekdays">
+        <span>日</span><span>一</span><span>二</span><span>三</span><span>四</span><span>五</span><span>六</span>
     </div>
 
-    <div id="scheduleContainer" class="schedule-list">
-        <div class="empty-note">加载排班表...</div>
+    <div class="calendar-grid" id="calendarGrid">
+        <!-- 动态渲染日历 -->
     </div>
-
-    <div class="info-note">
-        📆 未来100年公历节日 + 主要传统节日（春节/端午/中秋/清明等）自动显示<br>
-        ✅ 点击“勾”或“中”按钮切换排班，再次点击取消；所有排班数据自动保存在手机本地，关闭后不丢失。
-    </div>
-    <div class="footer-meta">
-        数据存储在您的浏览器中 · 安全私有
+    <div class="info-bar">
+        ✅ 勾符号  🀆 中文字 · 点击切换/取消排班 · 数据自动存本地 · 未来百年节日可见<br>
+        📆 上下滑动浏览整月 · 左右箭头切换月份
     </div>
 </div>
 
@@ -290,15 +277,15 @@
     const SHIFT_CHECK = "勾";
     const SHIFT_MID = "中";
 
-    // 排班存储 Map: key = "胡斌_2026-06-10" , value = "勾" / "中"
+    // 存储结构: Map key = "胡斌_2026-06-10" , value = "勾"/"中"
     let scheduleMap = new Map();
 
     let currentYear = new Date().getFullYear();
-    let currentMonth = new Date().getMonth() + 1;
+    let currentMonth = new Date().getMonth() + 1; // 1-12
 
     // ---------- 本地存储 ----------
     function loadFromLocalStorage() {
-        const stored = localStorage.getItem("shift_schedule_v2");
+        const stored = localStorage.getItem("shift_schedule_monthview");
         if (stored) {
             try {
                 const obj = JSON.parse(stored);
@@ -309,7 +296,7 @@
 
     function saveToLocalStorage() {
         const obj = Object.fromEntries(scheduleMap);
-        localStorage.setItem("shift_schedule_v2", JSON.stringify(obj));
+        localStorage.setItem("shift_schedule_monthview", JSON.stringify(obj));
     }
 
     function getShift(year, month, day, staffName) {
@@ -334,144 +321,162 @@
         } else {
             setShift(year, month, day, staffName, shiftType);
         }
-        renderSchedule(currentYear, currentMonth);
+        // 重新渲染当前月份
+        renderMonthCalendar(currentYear, currentMonth);
     }
 
-    // ---------- 增强版节假日引擎（未来100年，涵盖主要公历+传统节日近似）----------
-    // 返回该日期的节日名称数组 (含 emoji)
+    // ---------- 节假日引擎 (未来100年 公历+传统) ----------
     function getHolidaysForDate(year, month, day) {
         const festivals = [];
         const monthDay = `${month}-${day}`;
 
-        // ----- 公历固定节日 -----
         const fixed = {
-            "1-1": ["🎊 元旦"],
-            "2-14": ["💕 情人节"],
-            "3-8": ["🌸 妇女节"],
-            "3-12": ["🌳 植树节"],
-            "4-1": ["🎭 愚人节"],
-            "5-1": ["🏭 劳动节"],
-            "5-4": ["📖 青年节"],
-            "6-1": ["🧸 儿童节"],
-            "7-1": ["⭐ 建党节"],
-            "8-1": ["🎖️ 建军节"],
-            "9-10": ["🍎 教师节"],
-            "10-1": ["🇨🇳 国庆节"],
-            "10-31": ["🎃 万圣节"],
-            "12-25": ["🎄 圣诞节"]
+            "1-1": ["元旦"], "2-14": ["情人节"], "3-8": ["妇女节"], "3-12": ["植树节"],
+            "4-1": ["愚人节"], "5-1": ["劳动节"], "5-4": ["青年节"], "6-1": ["儿童节"],
+            "7-1": ["建党节"], "8-1": ["建军节"], "9-10": ["教师节"], "10-1": ["国庆节"],
+            "10-31": ["万圣节"], "12-25": ["圣诞节"]
         };
         if (fixed[monthDay]) festivals.push(...fixed[monthDay]);
 
-        // ----- 传统节日（基于公历区间近似，确保未来百年可见）-----
-        // 春节 (1月21日 ~ 2月20日)
-        if ((month === 1 && day >= 21) || (month === 2 && day <= 20)) {
-            festivals.push("🧧 春节·约");
-        }
-        // 元宵节 (2月8日 ~ 2月25日)
-        if (month === 2 && day >= 8 && day <= 25) festivals.push("🏮 元宵·近");
-        // 清明节 (精准4月4日或5日简单推算)
+        // 传统节日区间
+        if ((month === 1 && day >= 21) || (month === 2 && day <= 20)) festivals.push("春节·近");
+        if (month === 2 && day >= 8 && day <= 25) festivals.push("元宵·近");
         if (month === 4) {
-            let qingmingDay = 4;
-            // 粗略算法：大部分年份清明在4月4日或5日，2026年为4月5日，以此基础简单模拟
-            if ((year % 4 === 0 && year % 100 !== 0) || (year % 400 === 0)) qingmingDay = 4;
-            else qingmingDay = (year % 10 === 6 || year % 10 === 7) ? 5 : 4;
-            if (day === qingmingDay) festivals.push("🌿 清明节");
+            let qmDay = 4;
+            if ((year % 4 === 0 && year % 100 !== 0) || (year % 400 === 0)) qmDay = 4;
+            else qmDay = (year % 10 === 6 || year % 10 === 7) ? 5 : 4;
+            if (day === qmDay) festivals.push("清明");
         }
-        // 端午节 (公历5月28日 ~ 6月25日区间)
-        if ((month === 5 && day >= 28) || (month === 6 && day <= 25)) festivals.push("🐉 端午·近");
-        // 中秋节 (公历9月10日 ~ 10月8日区间)
-        if ((month === 9 && day >= 10) || (month === 10 && day <= 8)) festivals.push("🥮 中秋·近");
-        // 重阳节 (公历10月中下旬 10月11日~10月31日)
-        if (month === 10 && day >= 11 && day <= 31) festivals.push("🏵️ 重阳·近");
+        if ((month === 5 && day >= 28) || (month === 6 && day <= 25)) festivals.push("端午·近");
+        if ((month === 9 && day >= 10) || (month === 10 && day <= 8)) festivals.push("中秋·近");
+        if (month === 10 && day >= 11 && day <= 31) festivals.push("重阳·近");
+        if (month === 12 && day === 24) festivals.push("平安夜");
 
-        // ----- 其他特殊加注 (劳动节/国庆黄金周额外显示)-----
-        if (month === 5 && day >= 1 && day <= 5 && festivals.includes("🏭 劳动节")) festivals.push("📅 小长假");
-        if (month === 10 && day >= 1 && day <= 7 && festivals.includes("🇨🇳 国庆节")) festivals.push("🎉 黄金周");
-
-        // 去重（简单保留第一个相同语义的不去重也行，多个标签更喜庆）
-        return [...new Set(festivals)];
+        if (month === 10 && day >= 1 && day <= 7 && festivals.includes("国庆节")) festivals.push("黄金周");
+        return festivals.slice(0, 2); // 最多显示2个，避免拥挤
     }
 
-    function getWeekdayStr(year, month, day) {
-        const date = new Date(year, month - 1, day);
-        const weekdays = ["周日", "周一", "周二", "周三", "周四", "周五", "周六"];
-        return weekdays[date.getDay()];
-    }
-
+    // 判断周末
     function isWeekend(year, month, day) {
-        const date = new Date(year, month - 1, day);
-        const w = date.getDay();
+        const d = new Date(year, month-1, day);
+        const w = d.getDay();
         return w === 0 || w === 6;
     }
 
-    // ---------- 渲染当前月份 ----------
-    function renderSchedule(year, month) {
-        const container = document.getElementById("scheduleContainer");
-        if (!container) return;
+    // 渲染整月日历
+    function renderMonthCalendar(year, month) {
+        const grid = document.getElementById("calendarGrid");
+        if (!grid) return;
 
+        // 更新头部年月显示
+        const monthNames = ['1月','2月','3月','4月','5月','6月','7月','8月','9月','10月','11月','12月'];
+        document.getElementById("monthYearDisplay").innerText = `${year}年 ${monthNames[month-1]}`;
+
+        const firstDayOfMonth = new Date(year, month-1, 1);
+        const startWeekday = firstDayOfMonth.getDay(); // 0周日 ~ 6周六
         const daysInMonth = new Date(year, month, 0).getDate();
-        const cards = [];
 
-        for (let day = 1; day <= daysInMonth; day++) {
-            const weekday = getWeekdayStr(year, month, day);
-            const weekendFlag = isWeekend(year, month, day);
-            const holidays = getHolidaysForDate(year, month, day);
-            const dateNum = day;
+        let weeks = [];
+        let currentDay = 1;
+        let dayCounter = 1;
 
-            let holidayHtml = '';
-            if (holidays.length > 0) {
-                holidayHtml = `<div class="festival-list">${holidays.map(h => `<span class="holiday-tag">${h}</span>`).join('')}</div>`;
+        // 生成42格或35格 (6行)
+        const totalCells = 42;
+        for (let i = 0; i < totalCells; i++) {
+            const weekIdx = Math.floor(i / 7);
+            if (!weeks[weekIdx]) weeks[weekIdx] = [];
+            if (i < startWeekday || dayCounter > daysInMonth) {
+                weeks[weekIdx].push({ day: null, valid: false });
+            } else {
+                weeks[weekIdx].push({ day: dayCounter, valid: true, year, month });
+                dayCounter++;
             }
+        }
 
-            const weekendClass = weekendFlag ? 'weekend-badge' : '';
-            const weekendLabel = weekendFlag ? ' 周末' : '';
+        // 构建HTML
+        let html = '';
+        for (let w = 0; w < weeks.length; w++) {
+            const row = weeks[w];
+            if (row.every(cell => !cell.valid)) continue; // 跳过全空行
+            html += `<div class="week-row">`;
+            for (let i = 0; i < row.length; i++) {
+                const cell = row[i];
+                if (!cell.valid) {
+                    html += `<div class="day-cell empty-cell"></div>`;
+                    continue;
+                }
+                const dayNum = cell.day;
+                const cellYear = year;
+                const cellMonth = month;
+                const weekendFlag = isWeekend(cellYear, cellMonth, dayNum);
+                const holidays = getHolidaysForDate(cellYear, cellMonth, dayNum);
+                const holidayHtml = holidays.length ? `<span class="holiday-badge-mini">${holidays[0]}</span>` : '';
 
-            let staffRowsHtml = '';
-            for (let staff of STAFF_LIST) {
-                const currentShift = getShift(year, month, day, staff);
-                const isCheckActive = (currentShift === SHIFT_CHECK);
-                const isMidActive = (currentShift === SHIFT_MID);
-                staffRowsHtml += `
-                    <div class="staff-row">
-                        <span class="staff-name">${staff}</span>
-                        <div class="action-buttons">
-                            <button class="shift-btn ${isCheckActive ? 'active' : ''}" data-year="${year}" data-month="${month}" data-day="${day}" data-staff="${staff}" data-shift="勾">
-                                <span class="shift-icon">✔️</span>
-                                <span class="shift-text">勾</span>
-                            </button>
-                            <button class="shift-btn ${isMidActive ? 'active' : ''}" data-year="${year}" data-month="${month}" data-day="${day}" data-staff="${staff}" data-shift="中">
-                                <span class="shift-icon">🀆</span>
-                                <span class="shift-text">中</span>
-                            </button>
+                // 获取两位人员的排班状态
+                const shiftHu = getShift(cellYear, cellMonth, dayNum, "胡斌");
+                const shiftSu = getShift(cellYear, cellMonth, dayNum, "苏志强");
+
+                // 生成胡斌排班按钮
+                const huCheckActive = (shiftHu === SHIFT_CHECK);
+                const huMidActive = (shiftHu === SHIFT_MID);
+                const suCheckActive = (shiftSu === SHIFT_CHECK);
+                const suMidActive = (shiftSu === SHIFT_MID);
+
+                // 每个人员两个按钮 (勾/中)
+                const huButtons = `
+                    <div class="shift-buttons-mini">
+                        <button class="shift-mini ${huCheckActive ? 'active' : ''}" data-year="${cellYear}" data-month="${cellMonth}" data-day="${dayNum}" data-staff="胡斌" data-shift="勾">
+                            <span class="icon-small">✔️</span><span>勾</span>
+                        </button>
+                        <button class="shift-mini ${huMidActive ? 'active' : ''}" data-year="${cellYear}" data-month="${cellMonth}" data-day="${dayNum}" data-staff="胡斌" data-shift="中">
+                            <span class="icon-small">🀆</span><span>中</span>
+                        </button>
+                    </div>
+                `;
+                const suButtons = `
+                    <div class="shift-buttons-mini">
+                        <button class="shift-mini ${suCheckActive ? 'active' : ''}" data-year="${cellYear}" data-month="${cellMonth}" data-day="${dayNum}" data-staff="苏志强" data-shift="勾">
+                            <span class="icon-small">✔️</span><span>勾</span>
+                        </button>
+                        <button class="shift-mini ${suMidActive ? 'active' : ''}" data-year="${cellYear}" data-month="${cellMonth}" data-day="${dayNum}" data-staff="苏志强" data-shift="中">
+                            <span class="icon-small">🀆</span><span>中</span>
+                        </button>
+                    </div>
+                `;
+
+                html += `
+                    <div class="day-cell">
+                        <div class="day-number">
+                            <span class="num ${weekendFlag ? 'weekend-num' : ''}">${dayNum}</span>
+                            ${holidayHtml}
+                        </div>
+                        <div class="staff-shifts">
+                            <div class="staff-row-mini">
+                                <span class="staff-name-mini">胡斌</span>
+                                ${huButtons}
+                            </div>
+                            <div class="staff-row-mini">
+                                <span class="staff-name-mini">苏志强</span>
+                                ${suButtons}
+                            </div>
                         </div>
                     </div>
                 `;
             }
-
-            const cardHtml = `
-                <div class="day-card" data-date="${year}-${month}-${day}">
-                    <div class="card-header">
-                        <div class="date-info">
-                            <span class="date-num">${dateNum}</span>
-                            <span class="weekday ${weekendClass}">${weekday}${weekendLabel}</span>
-                        </div>
-                        ${holidayHtml}
-                    </div>
-                    ${staffRowsHtml}
-                </div>
-            `;
-            cards.push(cardHtml);
+            html += `</div>`;
         }
 
-        container.innerHTML = cards.length ? cards.join('') : '<div class="empty-note">暂无排班数据</div>';
+        grid.innerHTML = html;
 
-        // 事件委托绑定所有按钮
-        container.querySelectorAll('.shift-btn').forEach(btn => {
+        // 绑定所有按钮事件 (事件委托也可，直接绑定提升性能)
+        const btns = grid.querySelectorAll('.shift-mini');
+        btns.forEach(btn => {
             btn.removeEventListener('click', shiftClickHandler);
             btn.addEventListener('click', shiftClickHandler);
         });
     }
 
+    // 统一点击处理
     function shiftClickHandler(e) {
         e.stopPropagation();
         const btn = e.currentTarget;
@@ -487,78 +492,59 @@
         }
     }
 
-    // ---------- 年份/月份下拉框（当前年 ~ 当前年+100）----------
-    function initYearMonthSelectors() {
-        const yearSelect = document.getElementById('yearSelect');
-        const monthSelect = document.getElementById('monthSelect');
-        const baseYear = new Date().getFullYear();
-        // 添加未来100年
-        for (let y = baseYear; y <= baseYear + 100; y++) {
-            const option = document.createElement('option');
-            option.value = y;
-            option.textContent = `${y}年`;
-            if (y === currentYear) option.selected = true;
-            yearSelect.appendChild(option);
-        }
-        for (let m = 1; m <= 12; m++) {
-            const option = document.createElement('option');
-            option.value = m;
-            option.textContent = `${m}月`;
-            if (m === currentMonth) option.selected = true;
-            monthSelect.appendChild(option);
-        }
-
-        yearSelect.addEventListener('change', (e) => {
-            currentYear = parseInt(e.target.value);
-            renderSchedule(currentYear, currentMonth);
-        });
-        monthSelect.addEventListener('change', (e) => {
-            currentMonth = parseInt(e.target.value);
-            renderSchedule(currentYear, currentMonth);
-        });
-    }
-
+    // 月份切换 (边界支持未来100年)
     function changeMonth(delta) {
         let newMonth = currentMonth + delta;
         let newYear = currentYear;
         if (newMonth < 1) {
             newMonth = 12;
-            newYear -= 1;
+            newYear--;
         } else if (newMonth > 12) {
             newMonth = 1;
-            newYear += 1;
+            newYear++;
         }
-        const maxYear = new Date().getFullYear() + 100;
-        const minYear = new Date().getFullYear();
-        if (newYear < minYear) newYear = minYear;
+        const baseYear = new Date().getFullYear();
+        const maxYear = baseYear + 100;
+        if (newYear < baseYear) newYear = baseYear;
         if (newYear > maxYear) newYear = maxYear;
         if (newYear !== currentYear) {
-            const yearSelect = document.getElementById('yearSelect');
-            if (yearSelect) yearSelect.value = newYear;
+            currentYear = newYear;
+            currentMonth = newMonth;
+        } else {
+            currentMonth = newMonth;
         }
-        currentYear = newYear;
-        currentMonth = newMonth;
-        const monthSelect = document.getElementById('monthSelect');
-        if (monthSelect) monthSelect.value = currentMonth;
-        renderSchedule(currentYear, currentMonth);
+        // 确保月份合法
+        if (currentMonth < 1) currentMonth = 1;
+        if (currentMonth > 12) currentMonth = 12;
+        renderMonthCalendar(currentYear, currentMonth);
     }
 
-    function bindNavEvents() {
+    function goToToday() {
+        const today = new Date();
+        const baseYear = new Date().getFullYear();
+        const maxYear = baseYear + 100;
+        let y = today.getFullYear();
+        if (y < baseYear) y = baseYear;
+        if (y > maxYear) y = maxYear;
+        currentYear = y;
+        currentMonth = today.getMonth() + 1;
+        renderMonthCalendar(currentYear, currentMonth);
+    }
+
+    // 可选年月快捷 (为了未来100年年份范围, 但无下拉需求不过保留导航边界)
+    // 附加保证视图刷新
+    function initAndBind() {
+        loadFromLocalStorage();
         const prevBtn = document.getElementById('prevMonthBtn');
         const nextBtn = document.getElementById('nextMonthBtn');
+        const todayBtn = document.getElementById('todayBtn');
         if (prevBtn) prevBtn.addEventListener('click', () => changeMonth(-1));
         if (nextBtn) nextBtn.addEventListener('click', () => changeMonth(1));
+        if (todayBtn) todayBtn.addEventListener('click', () => goToToday());
+        renderMonthCalendar(currentYear, currentMonth);
     }
 
-    // ---------- 初始化 ----------
-    function init() {
-        loadFromLocalStorage();
-        initYearMonthSelectors();
-        bindNavEvents();
-        renderSchedule(currentYear, currentMonth);
-    }
-
-    init();
+    initAndBind();
 </script>
 </body>
 </html>
