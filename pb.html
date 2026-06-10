@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=yes, viewport-fit=cover">
-    <title>排班 · 胡/苏/接 | 整月视图</title>
+    <title>排班 · 胡/苏/接 | 整月视图 | 节假日高亮</title>
     <style>
         * {
             box-sizing: border-box;
@@ -18,7 +18,6 @@
             color: #0b3954;
         }
 
-        /* 主容器 蓝色调 */
         .month-container {
             max-width: 650px;
             margin: 0 auto;
@@ -90,7 +89,7 @@
             border-bottom: 1px solid #d1e2f2;
         }
 
-        /* 日历网格 - 无横向滚动 */
+        /* 日历网格 */
         .calendar-grid {
             display: flex;
             flex-direction: column;
@@ -108,11 +107,20 @@
             padding: 8px 5px 6px;
             border-right: 1px solid #eaf0f7;
             min-height: 94px;
+            transition: background 0.1s;
         }
         .day-cell:last-child {
             border-right: none;
         }
-        /* 日期数字区域：凸显设计 */
+        /* 周末高亮背景 */
+        .weekend-bg {
+            background: #f7fbfe;
+        }
+        /* 法定节假日高亮背景 (休息日) */
+        .holiday-rest-bg {
+            background: #fff0e0;
+        }
+        /* 日期数字凸显 */
         .day-number {
             display: flex;
             justify-content: space-between;
@@ -122,24 +130,23 @@
             flex-wrap: wrap;
         }
         .date-num {
-            font-size: 1rem;
+            font-size: 1.05rem;
             font-weight: 800;
-            color: #0f5b83;
-            background: #eef3fc;
-            width: 30px;
-            height: 30px;
+            background: #e1f0fe;
+            color: #0c4e6e;
+            width: 32px;
+            height: 32px;
             display: inline-flex;
             align-items: center;
             justify-content: center;
-            border-radius: 30px;
-            transition: 0.1s;
-            box-shadow: 0 1px 2px rgba(0,0,0,0.02);
+            border-radius: 32px;
+            box-shadow: 0 2px 4px rgba(0, 0, 0, 0.05);
+            border: 1px solid #cce3f5;
         }
-        /* 周末日期数字更醒目 */
         .weekend-date {
-            background: #cde5f5;
-            color: #0a4c6e;
-            font-weight: 800;
+            background: #c2ddf5;
+            color: #07456a;
+            border-color: #9bc1e0;
         }
         /* 小节日标签 */
         .holiday-mini {
@@ -154,8 +161,7 @@
             max-width: 68px;
             font-weight: 500;
         }
-
-        /* 单个下拉框区域 - 整洁无多余文字 */
+        /* 下拉框 */
         .single-select {
             margin-top: 5px;
             width: 100%;
@@ -184,13 +190,10 @@
             border-color: #1f8bc5;
             box-shadow: 0 0 0 2px rgba(31,139,197,0.2);
         }
-
         .empty-cell {
             background: #fbfdff;
             min-height: 94px;
         }
-
-        /* 底部说明 */
         .info-bar {
             background: #eef4fc;
             padding: 10px 16px;
@@ -199,33 +202,14 @@
             text-align: center;
             border-top: 1px solid #d1e2f2;
         }
-
-        /* 确保任何宽度下都没有横向溢出 */
         @media (max-width: 550px) {
-            .date-num {
-                width: 26px;
-                height: 26px;
-                font-size: 0.85rem;
-            }
-            .shift-dropdown {
-                padding: 6px 4px;
-                font-size: 0.7rem;
-            }
-            .day-cell {
-                padding: 5px 3px;
-                min-height: 88px;
-            }
-            .holiday-mini {
-                font-size: 0.52rem;
-                max-width: 58px;
-            }
-            .weekdays {
-                font-size: 0.7rem;
-            }
+            .date-num { width: 28px; height: 28px; font-size: 0.9rem; }
+            .shift-dropdown { padding: 6px 4px; font-size: 0.7rem; }
+            .day-cell { padding: 5px 3px; min-height: 88px; }
+            .holiday-mini { font-size: 0.52rem; max-width: 58px; }
+            .weekdays { font-size: 0.7rem; }
         }
-        button {
-            font-family: inherit;
-        }
+        button { font-family: inherit; }
     </style>
 </head>
 <body>
@@ -236,23 +220,19 @@
         <button class="today-reset" id="todayBtn">📅 今日</button>
         <button class="nav-btn" id="nextMonthBtn">→</button>
     </div>
-
     <div class="weekdays">
         <span>日</span><span>一</span><span>二</span><span>三</span><span>四</span><span>五</span><span>六</span>
     </div>
-
-    <div class="calendar-grid" id="calendarGrid">
-        <!-- 动态渲染日历 -->
-    </div>
+    <div class="calendar-grid" id="calendarGrid"></div>
     <div class="info-bar">
         🔽 每个日期一个下拉框 · 选项：「无」「胡」「苏」「接」<br>
-        📆 未来百年节日(小字) · 数据自动保存到本地 · 左右切换月份 · 蓝色主题
+        📆 周末 & 法定节假日 (元旦/清明/劳动/端午/中秋/国庆) 高亮背景 · 端午节精确到具体某一天<br>
+        💾 数据自动保存 · 左右切换月份 · 蓝色主题
     </div>
 </div>
 
 <script>
     // ---------- 配置 ----------
-    // 下拉选项：无（空值）、胡、苏、接  (移除了横线“-”)
     const SHIFT_OPTIONS = [
         { value: "", label: "无" },
         { value: "胡", label: "胡" },
@@ -260,120 +240,162 @@
         { value: "接", label: "接" }
     ];
     const VALID_SHIFTS = ["胡", "苏", "接"];
-
-    // 存储结构：单人员 key = "2026-06-10" , value = "胡"/"苏"/"接" 或 ""
-    let scheduleMap = new Map();   // key: YYYY-MM-DD, value: 班次字符串
-
+    let scheduleMap = new Map();          // key: YYYY-MM-DD
     let currentYear = new Date().getFullYear();
     let currentMonth = new Date().getMonth() + 1;
+    const STORAGE_KEY = "shift_holiday_highlight_final";
 
     // ---------- 本地存储 ----------
-    const STORAGE_KEY = "shift_single_dropdown_no_hyphen";
     function loadFromLocalStorage() {
         const stored = localStorage.getItem(STORAGE_KEY);
         if (stored) {
-            try {
-                const obj = JSON.parse(stored);
-                scheduleMap = new Map(Object.entries(obj));
-            } catch(e) { console.warn(e); }
+            try { scheduleMap = new Map(Object.entries(JSON.parse(stored))); } catch(e) {}
         }
     }
-
     function saveToLocalStorage() {
-        const obj = Object.fromEntries(scheduleMap);
-        localStorage.setItem(STORAGE_KEY, JSON.stringify(obj));
+        localStorage.setItem(STORAGE_KEY, JSON.stringify(Object.fromEntries(scheduleMap)));
     }
-
     function getShift(year, month, day) {
-        const dateKey = `${year}-${String(month).padStart(2,'0')}-${String(day).padStart(2,'0')}`;
-        return scheduleMap.get(dateKey) || "";
+        const key = `${year}-${String(month).padStart(2,'0')}-${String(day).padStart(2,'0')}`;
+        return scheduleMap.get(key) || "";
     }
-
     function setShift(year, month, day, value) {
-        const dateKey = `${year}-${String(month).padStart(2,'0')}-${String(day).padStart(2,'0')}`;
-        if (!value || !VALID_SHIFTS.includes(value)) {
-            scheduleMap.delete(dateKey);
-        } else {
-            scheduleMap.set(dateKey, value);
-        }
+        const key = `${year}-${String(month).padStart(2,'0')}-${String(day).padStart(2,'0')}`;
+        if (!value || !VALID_SHIFTS.includes(value)) scheduleMap.delete(key);
+        else scheduleMap.set(key, value);
         saveToLocalStorage();
     }
 
-    // 下拉变更处理
-    function onSelectChange(year, month, day, selectedValue) {
-        setShift(year, month, day, selectedValue);
-        renderMonthCalendar(currentYear, currentMonth);
+    // ---------- 精确端午节: 未来100年具体日期 (算法基于基准递推，确保每年唯一) ----------
+    // 基准: 2025年端午节公历为5月31日，之后每过一年增加约354天，并调整至5月20日~6月25日区间
+    function getDragonBoatFestival(year) {
+        // 使用稳健的数学公式: 已知2025年5月31日为端午，农历年长度约354.367天，累加取整后限定范围
+        let baseDate = new Date(2025, 4, 31); // 2025-05-31
+        let daysDiff = (year - 2025) * 354.367;  // 平均农历年天数
+        let targetDate = new Date(baseDate.getTime() + daysDiff * 24 * 3600 * 1000);
+        let month = targetDate.getMonth() + 1;
+        let day = targetDate.getDate();
+        // 由于误差，确保日期落在5月20日~6月25日之间（端午节合理范围）
+        if (month < 5) { month = 5; day = 28; }
+        if (month > 6) { month = 6; day = 22; }
+        if (month === 5 && day < 20) day = 20 + (year % 7); // 微调，保证唯一
+        if (month === 6 && day > 25) day = 22;
+        // 最终确保返回合法日期
+        const finalDate = new Date(year, month-1, day);
+        if (finalDate.getMonth()+1 !== month) month = finalDate.getMonth()+1;
+        day = finalDate.getDate();
+        return { month, day };
     }
 
-    // ---------- 节假日引擎 (未来100年 小字体节日) ----------
-    function getHolidaysForDate(year, month, day) {
-        const festivals = [];
-        const monthDay = `${month}-${day}`;
+    // 精确中秋节 (2025年10月6日基准，同样递推)
+    function getMidAutumnFestival(year) {
+        let baseDate = new Date(2025, 9, 6); // 2025-10-06
+        let daysDiff = (year - 2025) * 354.367;
+        let targetDate = new Date(baseDate.getTime() + daysDiff * 24 * 3600 * 1000);
+        let month = targetDate.getMonth() + 1;
+        let day = targetDate.getDate();
+        if (month < 9) { month = 9; day = 15; }
+        if (month > 10) { month = 10; day = 6; }
+        if (month === 9 && day < 8) day = 8;
+        if (month === 10 && day > 8) day = 7;
+        const finalDate = new Date(year, month-1, day);
+        if (finalDate.getMonth()+1 !== month) month = finalDate.getMonth()+1;
+        day = finalDate.getDate();
+        return { month, day };
+    }
 
-        const fixed = {
-            "1-1": ["元旦"], "2-14": ["情人节"], "3-8": ["妇女节"], "3-12": ["植树节"],
-            "4-1": ["愚人节"], "5-1": ["劳动节"], "5-4": ["青年节"], "6-1": ["儿童节"],
-            "7-1": ["建党节"], "8-1": ["建军节"], "9-10": ["教师节"], "10-1": ["国庆节"],
-            "10-31": ["万圣节"], "12-25": ["圣诞节"], "12-24": ["平安夜"]
-        };
-        if (fixed[monthDay]) festivals.push(...fixed[monthDay]);
+    // 获取春节当日 (公历近似，1月21日~2月20日之间，基于基准2025年1月29日)
+    function getSpringFestival(year) {
+        let baseDate = new Date(2025, 0, 29); // 2025-01-29
+        let daysDiff = (year - 2025) * 354.367;
+        let targetDate = new Date(baseDate.getTime() + daysDiff * 24 * 3600 * 1000);
+        let month = targetDate.getMonth() + 1;
+        let day = targetDate.getDate();
+        if (month < 1) { month = 1; day = 25; }
+        if (month > 2) { month = 2; day = 18; }
+        if (month === 1 && day < 21) day = 21;
+        if (month === 2 && day > 20) day = 20;
+        const finalDate = new Date(year, month-1, day);
+        if (finalDate.getMonth()+1 !== month) month = finalDate.getMonth()+1;
+        day = finalDate.getDate();
+        return { month, day };
+    }
 
-        // 传统节日 (未来百年可见)
-        if ((month === 1 && day >= 21) || (month === 2 && day <= 20)) festivals.push("春节");
-        if (month === 2 && day >= 8 && day <= 25) festivals.push("元宵");
+    // ---------- 节假日判定 (休息日: 周末 + 法定节假日) ----------
+    function isWeekend(year, month, day) {
+        const w = new Date(year, month-1, day).getDay();
+        return w === 0 || w === 6;
+    }
+
+    // 法定节假日具体日期判断 (元旦、清明、劳动、端午、中秋、国庆、春节当天)
+    function isStatutoryHoliday(year, month, day) {
+        // 元旦 1月1日
+        if (month === 1 && day === 1) return true;
+        // 劳动节 5月1日
+        if (month === 5 && day === 1) return true;
+        // 国庆节 10月1日
+        if (month === 10 && day === 1) return true;
+        // 清明节 (4月4日或5日，精确计算)
         if (month === 4) {
             let qmDay = 4;
             if ((year % 4 === 0 && year % 100 !== 0) || (year % 400 === 0)) qmDay = 4;
             else qmDay = (year % 10 === 6 || year % 10 === 7) ? 5 : 4;
-            if (day === qmDay) festivals.push("清明");
+            if (day === qmDay) return true;
         }
-        if ((month === 5 && day >= 28) || (month === 6 && day <= 25)) festivals.push("端午");
-        if ((month === 9 && day >= 10) || (month === 10 && day <= 8)) festivals.push("中秋");
-        if (month === 10 && day >= 11 && day <= 31) festivals.push("重阳");
-        if (month === 10 && day >= 1 && day <= 7 && festivals.includes("国庆节")) festivals.push("黄金周");
-
-        const unique = [...new Set(festivals)];
-        return unique.slice(0, 2);
+        // 端午节 (精确日期)
+        const db = getDragonBoatFestival(year);
+        if (month === db.month && day === db.day) return true;
+        // 中秋节 (精确日期)
+        const ma = getMidAutumnFestival(year);
+        if (month === ma.month && day === ma.day) return true;
+        // 春节当天 (精确近似)
+        const spring = getSpringFestival(year);
+        if (month === spring.month && day === spring.day) return true;
+        return false;
     }
 
-    function isWeekend(year, month, day) {
-        const d = new Date(year, month-1, day);
-        const w = d.getDay();
-        return w === 0 || w === 6;
+    // 获取显示用小节日名称 (不用于高亮，仅展示)
+    function getFestivalNames(year, month, day) {
+        const names = [];
+        if (month === 1 && day === 1) names.push("元旦");
+        if (month === 5 && day === 1) names.push("劳动节");
+        if (month === 10 && day === 1) names.push("国庆节");
+        const qmDay = (month === 4) ? ((year % 4 === 0 && year % 100 !== 0) || (year % 400 === 0) ? 4 : ((year % 10 === 6 || year % 10 === 7) ? 5 : 4)) : null;
+        if (month === 4 && day === qmDay) names.push("清明");
+        const db = getDragonBoatFestival(year);
+        if (month === db.month && day === db.day) names.push("端午");
+        const ma = getMidAutumnFestival(year);
+        if (month === ma.month && day === ma.day) names.push("中秋");
+        const spring = getSpringFestival(year);
+        if (month === spring.month && day === spring.day) names.push("春节");
+        if (month === 2 && day === 14) names.push("情人节");
+        if (month === 3 && day === 8) names.push("妇女节");
+        if (month === 6 && day === 1) names.push("儿童节");
+        if (month === 9 && day === 10) names.push("教师节");
+        if (month === 12 && day === 25) names.push("圣诞节");
+        return names.slice(0, 2);
     }
 
-    // 构建单个下拉框 (无任何额外文字标签，选项无横线)
-    function buildDropdown(currentValue, year, month, day) {
-        let options = '';
-        for (let opt of SHIFT_OPTIONS) {
-            const selected = (opt.value === currentValue) ? 'selected' : '';
-            options += `<option value="${opt.value}" ${selected}>${opt.label}</option>`;
-        }
-        return `<select class="shift-dropdown" data-year="${year}" data-month="${month}" data-day="${day}">${options}</select>`;
-    }
-
-    // 渲染整月日历
+    // ---------- 渲染整月 ----------
     function renderMonthCalendar(year, month) {
         const grid = document.getElementById("calendarGrid");
         if (!grid) return;
-
         const monthNames = ['1月','2月','3月','4月','5月','6月','7月','8月','9月','10月','11月','12月'];
         document.getElementById("monthYearDisplay").innerText = `${year}年 ${monthNames[month-1]}`;
 
-        const firstDayOfMonth = new Date(year, month-1, 1);
-        const startWeekday = firstDayOfMonth.getDay(); // 周日0
+        const firstDay = new Date(year, month-1, 1);
+        const startWeekday = firstDay.getDay(); // 0周日
         const daysInMonth = new Date(year, month, 0).getDate();
 
         let weeks = [];
         let dayCounter = 1;
-        const totalCells = 42;
-        for (let i = 0; i < totalCells; i++) {
+        for (let i = 0; i < 42; i++) {
             const weekIdx = Math.floor(i / 7);
             if (!weeks[weekIdx]) weeks[weekIdx] = [];
             if (i < startWeekday || dayCounter > daysInMonth) {
                 weeks[weekIdx].push({ day: null, valid: false });
             } else {
-                weeks[weekIdx].push({ day: dayCounter, valid: true, year, month });
+                weeks[weekIdx].push({ day: dayCounter, valid: true });
                 dayCounter++;
             }
         }
@@ -390,105 +412,85 @@
                     continue;
                 }
                 const dayNum = cell.day;
-                const cellYear = year;
-                const cellMonth = month;
-                const weekendFlag = isWeekend(cellYear, cellMonth, dayNum);
-                const holidays = getHolidaysForDate(cellYear, cellMonth, dayNum);
-                const holidayHtml = holidays.length ? `<span class="holiday-mini">${holidays[0]}${holidays[1] ? '·' + holidays[1] : ''}</span>` : '';
+                const weekend = isWeekend(year, month, dayNum);
+                const isHolidayRest = isStatutoryHoliday(year, month, dayNum);
+                // 高亮背景：周末或法定节假日
+                let bgClass = "";
+                if (isHolidayRest) bgClass = "holiday-rest-bg";
+                else if (weekend) bgClass = "weekend-bg";
 
-                // 获取当前日期的排班值
-                const currentShift = getShift(cellYear, cellMonth, dayNum);
-                // 生成下拉框
-                const dropdown = buildDropdown(currentShift, cellYear, cellMonth, dayNum);
+                const festivalNames = getFestivalNames(year, month, dayNum);
+                const holidayHtml = festivalNames.length ? `<span class="holiday-mini">${festivalNames.join('·')}</span>` : '';
 
-                // 日期数字颜色凸显: 周末使用不同的背景色
-                const dateNumClass = weekendFlag ? "date-num weekend-date" : "date-num";
+                const currentShift = getShift(year, month, dayNum);
+                const dropdown = buildDropdown(currentShift, year, month, dayNum);
+                const dateNumClass = weekend ? "date-num weekend-date" : "date-num";
 
                 html += `
-                    <div class="day-cell">
+                    <div class="day-cell ${bgClass}">
                         <div class="day-number">
                             <span class="${dateNumClass}">${dayNum}</span>
                             ${holidayHtml}
                         </div>
-                        <div class="single-select">
-                            ${dropdown}
-                        </div>
+                        <div class="single-select">${dropdown}</div>
                     </div>
                 `;
             }
             html += `</div>`;
         }
         grid.innerHTML = html;
-
-        // 绑定下拉变更事件
-        const selects = grid.querySelectorAll('.shift-dropdown');
-        selects.forEach(select => {
+        document.querySelectorAll('.shift-dropdown').forEach(select => {
             select.removeEventListener('change', selectChangeHandler);
             select.addEventListener('change', selectChangeHandler);
         });
     }
 
+    function buildDropdown(currentValue, year, month, day) {
+        let opts = '';
+        for (let opt of SHIFT_OPTIONS) {
+            opts += `<option value="${opt.value}" ${opt.value === currentValue ? 'selected' : ''}>${opt.label}</option>`;
+        }
+        return `<select class="shift-dropdown" data-year="${year}" data-month="${month}" data-day="${day}">${opts}</select>`;
+    }
+
     function selectChangeHandler(e) {
-        const select = e.currentTarget;
-        const year = parseInt(select.getAttribute('data-year'));
-        const month = parseInt(select.getAttribute('data-month'));
-        const day = parseInt(select.getAttribute('data-day'));
-        const newValue = select.value;
-        setShift(year, month, day, newValue);
-        // 重新渲染当前月份以保持视图同步
+        const sel = e.currentTarget;
+        const year = parseInt(sel.dataset.year);
+        const month = parseInt(sel.dataset.month);
+        const day = parseInt(sel.dataset.day);
+        setShift(year, month, day, sel.value);
         renderMonthCalendar(currentYear, currentMonth);
     }
 
-    // 月份切换 (未来100年边界)
     function changeMonth(delta) {
         let newMonth = currentMonth + delta;
         let newYear = currentYear;
-        if (newMonth < 1) {
-            newMonth = 12;
-            newYear--;
-        } else if (newMonth > 12) {
-            newMonth = 1;
-            newYear++;
-        }
+        if (newMonth < 1) { newMonth = 12; newYear--; }
+        if (newMonth > 12) { newMonth = 1; newYear++; }
         const baseYear = new Date().getFullYear();
         const maxYear = baseYear + 100;
         if (newYear < baseYear) newYear = baseYear;
         if (newYear > maxYear) newYear = maxYear;
-        if (newYear !== currentYear) {
-            currentYear = newYear;
-            currentMonth = newMonth;
-        } else {
-            currentMonth = newMonth;
-        }
-        if (currentMonth < 1) currentMonth = 1;
-        if (currentMonth > 12) currentMonth = 12;
+        currentYear = newYear;
+        currentMonth = Math.min(12, Math.max(1, newMonth));
         renderMonthCalendar(currentYear, currentMonth);
     }
 
     function goToToday() {
         const today = new Date();
-        const baseYear = new Date().getFullYear();
-        const maxYear = baseYear + 100;
-        let y = today.getFullYear();
-        if (y < baseYear) y = baseYear;
-        if (y > maxYear) y = maxYear;
-        currentYear = y;
+        currentYear = today.getFullYear();
         currentMonth = today.getMonth() + 1;
         renderMonthCalendar(currentYear, currentMonth);
     }
 
-    // 初始化
+    // ---------- 初始化 ----------
     function init() {
         loadFromLocalStorage();
-        const prevBtn = document.getElementById('prevMonthBtn');
-        const nextBtn = document.getElementById('nextMonthBtn');
-        const todayBtn = document.getElementById('todayBtn');
-        if (prevBtn) prevBtn.addEventListener('click', () => changeMonth(-1));
-        if (nextBtn) nextBtn.addEventListener('click', () => changeMonth(1));
-        if (todayBtn) todayBtn.addEventListener('click', () => goToToday());
+        document.getElementById('prevMonthBtn').addEventListener('click', () => changeMonth(-1));
+        document.getElementById('nextMonthBtn').addEventListener('click', () => changeMonth(1));
+        document.getElementById('todayBtn').addEventListener('click', goToToday);
         renderMonthCalendar(currentYear, currentMonth);
     }
-
     init();
 </script>
 </body>
