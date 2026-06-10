@@ -113,7 +113,6 @@
         .stat-hu { color: #1f6392; }
         .stat-su { color: #2b7a2b; }
         .stat-husu { color: #c95a0f; }
-        .stat-none { color: #7f8c8d; }
         .weekdays {
             display: grid;
             grid-template-columns: repeat(7, 1fr);
@@ -232,7 +231,7 @@
             border-top: 1px solid #d1e2f2;
         }
 
-        /* 浮动选择菜单 */
+        /* 全局浮动菜单（单例） */
         .staff-menu {
             position: fixed;
             background: white;
@@ -245,6 +244,13 @@
             backdrop-filter: blur(8px);
             background: rgba(255,255,255,0.96);
             border: 1px solid #cde3f5;
+            opacity: 0;
+            transition: opacity 0.1s;
+            pointer-events: none;
+        }
+        .staff-menu.show {
+            opacity: 1;
+            pointer-events: auto;
         }
         .staff-menu button {
             background: #f0f7ff;
@@ -291,9 +297,9 @@
     </div>
     <div class="calendar-grid" id="calendarGrid"></div>
     <div class="info-bar">
-        👆 点击日期格子中的空白区域，弹出按钮直接选择上班人员（胡 / 苏 / 胡苏）<br>
+        👆 点击日期格子中的空白区域，弹出按钮选择上班人员（胡 / 苏 / 胡苏）<br>
         📌 法定节假日显示标签，周末显示<span class="rest-badge">休</span><br>
-        🔥 今日日期超高亮 · 📦 批量连填 · 💾 数据自动保存 · 📱 支持PWA添加到主屏幕
+        🔥 今日日期超高亮 · 📦 批量连填 · 💾 数据自动保存 · 📱 支持PWA
     </div>
 </div>
 
@@ -302,8 +308,9 @@
     let scheduleMap = new Map();
     let currentYear = new Date().getFullYear();
     let currentMonth = new Date().getMonth() + 1;
-    const STORAGE_KEY = "shift_manual_buttons";
+    const STORAGE_KEY = "shift_optimized_menu";
 
+    // 存储
     function loadFromLocalStorage() {
         const stored = localStorage.getItem(STORAGE_KEY);
         if (stored) {
@@ -325,56 +332,93 @@
             scheduleMap.set(key, value);
         }
         saveToLocalStorage();
-        renderMonthCalendar(currentYear, currentMonth);
+        // 局部更新该日期格子，避免重绘整个月历
+        updateDayCell(year, month, day);
+        // 更新统计栏
+        updateStats(currentYear, currentMonth);
     }
 
-    // 浮动菜单
-    let activeMenu = null;
-    function showStaffMenu(x, y, year, month, day) {
-        if (activeMenu) activeMenu.remove();
-        const menu = document.createElement('div');
-        menu.className = 'staff-menu';
-        menu.style.left = x + 'px';
-        menu.style.top = y + 'px';
+    // 局部更新单个日期格子的样式和文字
+    function updateDayCell(year, month, day) {
+        const cell = document.querySelector(`.day-cell[data-year='${year}'][data-month='${month}'][data-day='${day}']`);
+        if (!cell) return;
+        const shiftVal = getShift(year, month, day);
+        // 更新背景类
+        let shiftClass = "shift-none";
+        if (shiftVal === "胡") shiftClass = "shift-hu";
+        else if (shiftVal === "苏") shiftClass = "shift-su";
+        else if (shiftVal === "胡苏") shiftClass = "shift-husu";
+        cell.classList.remove("shift-hu", "shift-su", "shift-husu", "shift-none");
+        cell.classList.add(shiftClass);
+        // 更新名字显示
+        let nameDiv = cell.querySelector('.shift-name');
+        if (shiftVal) {
+            if (nameDiv) nameDiv.textContent = shiftVal;
+            else {
+                const newName = document.createElement('div');
+                newName.className = 'shift-name';
+                newName.textContent = shiftVal;
+                cell.appendChild(newName);
+            }
+        } else {
+            if (nameDiv) nameDiv.remove();
+        }
+    }
+
+    // 全局浮动菜单（单例）
+    let staffMenu = null;
+    let currentPendingCell = null;
+    function initStaffMenu() {
+        if (staffMenu) return;
+        staffMenu = document.createElement('div');
+        staffMenu.className = 'staff-menu';
         const btnHu = document.createElement('button');
         btnHu.textContent = '胡';
-        btnHu.onclick = () => { setShift(year, month, day, '胡'); closeMenu(); };
+        btnHu.onclick = () => { if (currentPendingCell) applyShift(currentPendingCell, '胡'); hideMenu(); };
         const btnSu = document.createElement('button');
         btnSu.textContent = '苏';
-        btnSu.onclick = () => { setShift(year, month, day, '苏'); closeMenu(); };
+        btnSu.onclick = () => { if (currentPendingCell) applyShift(currentPendingCell, '苏'); hideMenu(); };
         const btnHuSu = document.createElement('button');
         btnHuSu.textContent = '胡苏';
-        btnHuSu.onclick = () => { setShift(year, month, day, '胡苏'); closeMenu(); };
-        menu.appendChild(btnHu);
-        menu.appendChild(btnSu);
-        menu.appendChild(btnHuSu);
-        document.body.appendChild(menu);
-        activeMenu = menu;
-
-        // 边界检测，防止超出屏幕右边缘
-        const rect = menu.getBoundingClientRect();
+        btnHuSu.onclick = () => { if (currentPendingCell) applyShift(currentPendingCell, '胡苏'); hideMenu(); };
+        staffMenu.appendChild(btnHu);
+        staffMenu.appendChild(btnSu);
+        staffMenu.appendChild(btnHuSu);
+        document.body.appendChild(staffMenu);
+        // 点击其他地方关闭
+        document.addEventListener('click', (e) => {
+            if (staffMenu.classList.contains('show') && !staffMenu.contains(e.target)) {
+                hideMenu();
+            }
+        });
+    }
+    function showMenuAt(x, y, cell) {
+        initStaffMenu();
+        currentPendingCell = cell;
+        staffMenu.style.left = x + 'px';
+        staffMenu.style.top = y + 'px';
+        // 边界检测
+        const rect = staffMenu.getBoundingClientRect();
         if (rect.right > window.innerWidth) {
-            menu.style.left = (window.innerWidth - rect.width - 10) + 'px';
+            staffMenu.style.left = (window.innerWidth - rect.width - 10) + 'px';
         }
         if (rect.bottom > window.innerHeight) {
-            menu.style.top = (window.innerHeight - rect.height - 10) + 'px';
+            staffMenu.style.top = (window.innerHeight - rect.height - 10) + 'px';
         }
-
-        function closeMenu() {
-            if (activeMenu) activeMenu.remove();
-            activeMenu = null;
-        }
-        // 点击其他区域关闭
-        const closeHandler = (e) => {
-            if (!menu.contains(e.target)) {
-                closeMenu();
-                document.removeEventListener('click', closeHandler);
-            }
-        };
-        setTimeout(() => document.addEventListener('click', closeHandler), 0);
+        staffMenu.classList.add('show');
+    }
+    function hideMenu() {
+        staffMenu.classList.remove('show');
+        currentPendingCell = null;
+    }
+    function applyShift(cell, shiftValue) {
+        const year = parseInt(cell.dataset.year);
+        const month = parseInt(cell.dataset.month);
+        const day = parseInt(cell.dataset.day);
+        setShift(year, month, day, shiftValue);
     }
 
-    // 节日映射 (精确数据，仅展示标签)
+    // ---------- 节日映射（精确） ----------
     const springFestivalMap = {
         2025:[1,29],2026:[2,17],2027:[2,6],2028:[1,26],2029:[2,13],2030:[2,3],
         2031:[1,23],2032:[2,11],2033:[1,31],2034:[2,19],2035:[2,8],2036:[1,28],
@@ -457,6 +501,7 @@
         let type = prompt("班次 (胡 / 苏 / 胡苏)", "胡");
         if (!type || !["胡","苏","胡苏"].includes(type)) { alert("班次必须是 胡、苏 或 胡苏"); return; }
         for (let d=s; d<=e; d++) setShift(year, month, d, type);
+        // 批量后重绘整个月历（简单处理）
         renderMonthCalendar(year, month);
     }
     function renderMonthCalendar(year, month) {
@@ -535,14 +580,10 @@
             if (!zone) return;
             let cell = zone.closest('.day-cell');
             if (!cell) return;
-            const year = parseInt(cell.dataset.year);
-            const month = parseInt(cell.dataset.month);
-            const day = parseInt(cell.dataset.day);
-            if (isNaN(year) || isNaN(month) || isNaN(day)) return;
             const rect = zone.getBoundingClientRect();
             const x = rect.left + window.scrollX;
             const y = rect.bottom + window.scrollY;
-            showStaffMenu(x, y, year, month, day);
+            showMenuAt(x, y, cell);
         });
     }
     function changeMonth(delta) {
@@ -557,12 +598,14 @@
         currentYear = newYear;
         currentMonth = Math.min(12, Math.max(1, newMonth));
         renderMonthCalendar(currentYear, currentMonth);
+        hideMenu();
     }
     function goToToday() {
         const today = new Date();
         currentYear = today.getFullYear();
         currentMonth = today.getMonth() + 1;
         renderMonthCalendar(currentYear, currentMonth);
+        hideMenu();
     }
     function installServiceWorker() {
         if (!('serviceWorker' in navigator)) return;
