@@ -2,124 +2,42 @@
 <html lang="zh-CN">
 <head>
 <meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>智能排班 V2</title>
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-title" content="排班大师">
+<meta name="theme-color" content="#d9ebff">
+<title>排班大师 · 完整升级版</title>
 
 <style>
-body{
-    margin:0;
-    font-family:system-ui;
-    background:#eef3fc;
-    color:#0b3954;
-}
+body{margin:0;font-family:system-ui;background:#eef3fc}
+.container{max-width:760px;margin:auto;background:#fff;border-radius:20px;overflow:hidden}
 
-.container{
-    max-width:720px;
-    margin:0 auto;
-    background:white;
-    border-radius:20px;
-    overflow:hidden;
-    box-shadow:0 10px 30px rgba(0,0,0,.1);
-}
+.header{display:flex;justify-content:space-between;align-items:center;padding:10px;background:#d9ebff;flex-wrap:wrap}
+button{border:none;padding:8px 12px;border-radius:20px;background:#f0f7ff}
 
-/* 顶部 */
-.header{
-    display:flex;
-    justify-content:space-between;
-    align-items:center;
-    padding:12px;
-    background:#d9ebff;
-}
+.stats{display:flex;justify-content:space-around;padding:6px;background:#eaf3ff;font-size:13px}
 
-.btn{
-    border:none;
-    padding:8px 12px;
-    border-radius:12px;
-    background:#fff;
-    cursor:pointer;
-}
+.weekdays{display:grid;grid-template-columns:repeat(7,1fr);text-align:center;font-weight:600;background:#eef4fc;padding:6px}
 
-.title{
-    font-weight:700;
-}
+.grid{display:flex;flex-direction:column;max-height:70vh;overflow:auto}
 
-/* 周 */
-.weekdays{
-    display:grid;
-    grid-template-columns:repeat(7,1fr);
-    text-align:center;
-    padding:6px;
-    font-size:12px;
-    background:#f3f8ff;
-}
+.row{display:grid;grid-template-columns:repeat(7,1fr)}
 
-/* 日历 */
-.grid{
-    display:flex;
-    flex-direction:column;
-    max-height:75vh;
-    overflow:auto;
-}
+.cell{min-height:95px;border:1px solid #eef;padding:4px;cursor:pointer;display:flex;flex-direction:column}
 
-.row{
-    display:grid;
-    grid-template-columns:repeat(7,1fr);
-}
+.cell:active{filter:brightness(.95)}
 
-.cell{
-    min-height:90px;
-    border:1px solid #e6eef7;
-    padding:4px;
-    position:relative;
-    cursor:pointer;
-    user-select:none;
-}
+.date{width:26px;height:26px;background:#f1f6ff;border-radius:50%;display:flex;align-items:center;justify-content:center;font-weight:700}
 
-.empty{
-    background:#fafafa;
-}
+.hu{background:#dbe9ff}
+.su{background:#dbf5dd}
+.jie{background:#ffe7d6}
+.holiday{background:#ffe6e6}
+.workday{background:#fff3cd}
 
-/* 日期 */
-.date{
-    width:26px;
-    height:26px;
-    border-radius:50%;
-    display:flex;
-    align-items:center;
-    justify-content:center;
-    font-size:12px;
-    font-weight:700;
-    background:#eef6ff;
-}
+.name{text-align:center;margin-top:6px;font-weight:700;font-size:14px}
 
-.today{
-    background:#ff4d4f !important;
-    color:#fff;
-}
-
-/* 排班颜色 */
-.hu{ background:#dbe9ff; }
-.su{ background:#dbffe0; }
-.jie{ background:#ffe6d6; }
-
-/* badge */
-.badge{
-    font-size:10px;
-    padding:2px 6px;
-    border-radius:10px;
-    position:absolute;
-    right:4px;
-    top:4px;
-}
-.rest{ background:#ffd18b; }
-.makeup{ background:#ff9c7a; }
-
-/* 底部 */
-.footer{
-    padding:10px;
-    font-size:12px;
-    background:#f3f8ff;
-}
+.small{font-size:10px;text-align:center;margin-top:2px}
 </style>
 </head>
 
@@ -127,128 +45,198 @@ body{
 <div class="container">
 
 <div class="header">
-    <button class="btn" onclick="changeMonth(-1)">←</button>
-    <div class="title" id="title"></div>
-    <button class="btn" onclick="changeMonth(1)">→</button>
+<button onclick="change(-1)">←</button>
+<div id="title"></div>
+<button onclick="change(1)">→</button>
+<button onclick="today()">今日</button>
+<button onclick="batch()">批量</button>
 </div>
 
+<div class="stats" id="stats"></div>
+
 <div class="weekdays">
-    <div>日</div><div>一</div><div>二</div><div>三</div><div>四</div><div>五</div><div>六</div>
+<span>日</span><span>一</span><span>二</span><span>三</span><span>四</span><span>五</span><span>六</span>
 </div>
 
 <div class="grid" id="grid"></div>
 
-<div class="footer" id="stats"></div>
-
 </div>
 
 <script>
-const types=["","胡","苏","接"];
-let map=new Map(JSON.parse(localStorage.getItem("shift")||"[]"));
+const CYCLE=["","胡","苏","接"];
+const KEY="schedule_v3";
 
-let now=new Date();
-let y=now.getFullYear();
-let m=now.getMonth()+1;
+let map=new Map();
+let y=new Date().getFullYear();
+let m=new Date().getMonth()+1;
+
+/* ========= 节假日数据（可扩展） ========= */
+const HOLIDAY={
+"2026":{
+holidays:{
+"01-01":"元旦",
+"05-01":"劳动节",
+"10-01":"国庆"
+},
+leaveRanges:[
+{start:"02-17",end:"02-23",name:"春节"},
+{start:"05-01",end:"05-05",name:"劳动节"},
+{start:"10-01",end:"10-07",name:"国庆"}
+],
+workdays:["02-15","10-11"]
+}
+};
+
+/* ========= 工具 ========= */
+function key(y,m,d){
+return `${y}-${String(m).padStart(2,'0')}-${String(d).padStart(2,'0')}`;
+}
 
 function save(){
-    localStorage.setItem("shift",JSON.stringify([...map]));
+localStorage.setItem(KEY,JSON.stringify(Object.fromEntries(map)));
 }
 
-/* ===== 日期 ===== */
-function key(y,m,d){
-    return `${y}-${String(m).padStart(2,'0')}-${String(d).padStart(2,'0')}`;
+function load(){
+try{
+map=new Map(Object.entries(JSON.parse(localStorage.getItem(KEY)||"{}")));
+}catch(e){}
 }
 
-/* ===== 点击循环 ===== */
-function toggle(k){
-    let v=map.get(k)||"";
-    let i=types.indexOf(v);
-    i=(i+1)%types.length;
-    if(types[i]==="") map.delete(k);
-    else map.set(k,types[i]);
-    save();
-    render();
+function get(y,m,d){
+return map.get(key(y,m,d))||"";
 }
 
-/* ===== 今天 ===== */
-function isToday(y1,m1,d1){
-    return y1===now.getFullYear() && m1===now.getMonth()+1 && d1===now.getDate();
+function set(y,m,d,v,render=true){
+let k=key(y,m,d);
+if(!v) map.delete(k);
+else map.set(k,v);
+save();
+if(render) render();
 }
 
-/* ===== 渲染 ===== */
+function cycle(y,m,d){
+let cur=get(y,m,d);
+let i=CYCLE.indexOf(cur);
+set(y,m,d,CYCLE[(i+1)%CYCLE.length]);
+}
+
+/* ========= 节假日逻辑 ========= */
+function fmt(m,d){return `${String(m).padStart(2,'0')}-${String(d).padStart(2,'0')}`}
+
+function holidayInfo(y,m,d){
+let cfg=HOLIDAY[y];
+if(!cfg) return {type:"normal"};
+
+let t=fmt(m,d);
+
+if(cfg.holidays[t]) return {type:"holiday",name:cfg.holidays[t]};
+
+for(let r of cfg.leaveRanges){
+if(t>=r.start && t<=r.end) return {type:"holiday",name:r.name};
+}
+
+if(cfg.workdays.includes(t)) return {type:"workday",name:"调休上班"};
+
+return {type:"normal"};
+}
+
+/* ========= 渲染 ========= */
 function render(){
-    document.getElementById("title").innerText=`${y}年${m}月`;
+let el=document.getElementById("grid");
+let title=document.getElementById("title");
 
-    let first=new Date(y,m-1,1);
-    let start=first.getDay();
-    let days=new Date(y,m,0).getDate();
+title.innerText=`${y}年${m}月`;
 
-    let html="";
-    let day=1;
+let first=new Date(y,m-1,1).getDay();
+let days=new Date(y,m,0).getDate();
 
-    for(let i=0;i<42;i++){
-        let w=Math.floor(i/7);
-        if(!html[w]) html+="<div class='row'>";
+let html="";
+let d=1;
 
-        if(i<start||day>days){
-            html+="<div class='cell empty'></div>";
-        }else{
+for(let i=0;i<42;i++){
+if(i%7===0) html+="<div class='row'>";
 
-            let k=key(y,m,day);
-            let v=map.get(k)||"";
+if(i<first||d>days){
+html+="<div class='cell'></div>";
+}else{
 
-            let cls="";
-            if(v==="胡") cls="hu";
-            if(v==="苏") cls="su";
-            if(v==="接") cls="jie";
+let v=get(y,m,d);
+let info=holidayInfo(y,m,d);
 
-            let today=isToday(y,m,day)?"today":"";
+let cls="";
+if(v==="胡")cls="hu";
+if(v==="苏")cls="su";
+if(v==="接")cls="jie";
+if(info.type==="holiday")cls="holiday";
+if(info.type==="workday")cls="workday";
 
-            html+=`
-            <div class="cell ${cls}" onclick="toggle('${k}')">
-                <div class="date ${today}">${day}</div>
-                ${v?`<div class="badge">${v}</div>`:""}
-            </div>`;
-
-            day++;
-        }
-
-        if((i+1)%7===0) html+="</div>";
-    }
-
-    document.getElementById("grid").innerHTML=html;
-
-    stats();
+html+=`
+<div class="cell ${cls}" onclick="cycle(${y},${m},${d})">
+<div class="date">${d}</div>
+${v?`<div class="name">${v}</div>`:""}
+${info.name?`<div class="small">${info.name}</div>`:""}
+</div>`;
+d++;
+}
+if(i%7===6) html+="</div>";
 }
 
-/* ===== 统计 ===== */
+el.innerHTML=html;
+stats();
+}
+
+/* ========= 统计 ========= */
 function stats(){
-    let hu=0,su=0,jie=0,none=0;
+let c={胡:0,苏:0,接:0,空:0};
+let days=new Date(y,m,0).getDate();
 
-    let days=new Date(y,m,0).getDate();
-
-    for(let d=1;d<=days;d++){
-        let v=map.get(key(y,m,d))||"";
-        if(v==="胡") hu++;
-        else if(v==="苏") su++;
-        else if(v==="接") jie++;
-        else none++;
-    }
-
-    document.getElementById("stats").innerHTML=
-    `胡:${hu} 天 ｜ 苏:${su} 天 ｜ 接:${jie} 天 ｜ 未排:${none} 天`;
+for(let i=1;i<=days;i++){
+let v=get(y,m,i);
+if(v==="胡")c.胡++;
+else if(v==="苏")c.苏++;
+else if(v==="接")c.接++;
+else c.空++;
 }
 
-/* ===== 月份切换 ===== */
-function changeMonth(d){
-    m+=d;
-    if(m>12){m=1;y++;}
-    if(m<1){m=12;y--;}
-    render();
+document.getElementById("stats").innerHTML=
+`胡:${c.胡} 苏:${c.苏} 接:${c.接} 空:${c.空}`;
 }
 
+/* ========= 操作 ========= */
+function change(n){
+m+=n;
+if(m<1){m=12;y--}
+if(m>12){m=1;y++}
 render();
-</script>
+}
 
+function today(){
+let t=new Date();
+y=t.getFullYear();
+m=t.getMonth()+1;
+render();
+}
+
+function batch(){
+let s=+prompt("开始日");
+let e=+prompt("结束日");
+let v=prompt("胡/苏/接","胡");
+if(!["胡","苏","接"].includes(v))return;
+
+for(let i=s;i<=e;i++) set(y,m,i,v,false);
+render();
+}
+
+/* ========= 初始化 ========= */
+function init(){
+load();
+let t=new Date();
+y=t.getFullYear();
+m=t.getMonth()+1;
+render();
+}
+
+init();
+</script>
 </body>
 </html>
