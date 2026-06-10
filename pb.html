@@ -9,7 +9,7 @@
     <meta name="theme-color" content="#d9ebff">
     <link rel="apple-touch-icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'%3E%3Crect width='100' height='100' fill='%231f6392'/%3E%3Ctext x='50' y='67' font-size='50' text-anchor='middle' fill='white' font-family='system-ui'%3E📅%3C/text%3E%3C/svg%3E">
     <link rel="manifest" href="data:application/manifest+json,{
-        \"name\": \"排班大师 - 胡/苏/接\",
+        \"name\": \"排班大师 - 胡/苏/胡苏\",
         \"short_name\": \"排班大师\",
         \"start_url\": \".\",
         \"display\": \"standalone\",
@@ -21,7 +21,7 @@
             \"type\": \"image/svg+xml\"
         }]
     }">
-    <title>排班大师 · 胡/苏/接</title>
+    <title>排班大师 · 胡/苏/胡苏</title>
     <style>
         * {
             box-sizing: border-box;
@@ -112,7 +112,7 @@
         }
         .stat-hu { color: #1f6392; }
         .stat-su { color: #2b7a2b; }
-        .stat-jie { color: #c95a0f; }
+        .stat-husu { color: #c95a0f; }
         .stat-none { color: #7f8c8d; }
         .weekdays {
             display: grid;
@@ -150,7 +150,7 @@
         .day-cell:last-child { border-right: none; }
         .day-cell.shift-hu { background: #d6e6ff; }
         .day-cell.shift-su { background: #d0f0d0; }
-        .day-cell.shift-jie { background: #ffe5cc; }
+        .day-cell.shift-husu { background: #ffe5cc; }
         .day-cell.shift-none { background: #ffffff; }
         .day-cell:active { filter: brightness(0.97); }
         .day-number {
@@ -250,9 +250,9 @@
         </div>
     </div>
     <div class="stats-bar" id="statsBar">
-        <span class="stat-item stat-hu">胡斌: 0天</span>
-        <span class="stat-item stat-su">苏志强: 0天</span>
-        <span class="stat-item stat-jie">接: 0天</span>
+        <span class="stat-item stat-hu">胡: 0天</span>
+        <span class="stat-item stat-su">苏: 0天</span>
+        <span class="stat-item stat-husu">胡苏: 0天</span>
         <span class="stat-item stat-none">未排: 0天</span>
     </div>
     <div class="weekdays">
@@ -260,7 +260,7 @@
     </div>
     <div class="calendar-grid" id="calendarGrid"></div>
     <div class="info-bar">
-        ✨ 点击任意日期格子循环切换：空白 → 胡 → 苏 → 接 → 空白，并显示名字<br>
+        ✨ 点击任意日期格子循环切换：空白 → 胡 → 苏 → 胡苏 → 空白，并显示名字<br>
         📌 法定节假日（元旦/清明/劳动/端午/中秋/国庆/春节）显示标签，周末显示<span class="rest-badge">休</span><br>
         🔥 今日日期<span style="background:#f9b81b; color:white; padding:2px 6px; border-radius:30px;">超高亮</span><br>
         📦 批量连填：选择起止日期，统一设为指定班次 · 数据自动保存 · 左右切换月份<br>
@@ -270,11 +270,11 @@
 
 <script>
     // ---------- 配置 ----------
-    const SHIFT_CYCLE = ["", "胡", "苏", "接"];  // 空字符串表示无排班（显示空白）
-    let scheduleMap = new Map();   // key: YYYY-MM-DD, value: "胡"/"苏"/"接"/""
+    const SHIFT_CYCLE = ["", "胡", "苏", "胡苏"];  // 空字符串表示无排班（显示空白）
+    let scheduleMap = new Map();   // key: YYYY-MM-DD, value: "胡"/"苏"/"胡苏"/""
     let currentYear = new Date().getFullYear();
     let currentMonth = new Date().getMonth() + 1;
-    const STORAGE_KEY = "shift_holiday_weekend_today";
+    const STORAGE_KEY = "shift_holiday_weekend_today_v2";
 
     // 存储
     function loadFromLocalStorage() {
@@ -292,7 +292,7 @@
     }
     function setShift(year, month, day, value) {
         const key = `${year}-${String(month).padStart(2,'0')}-${String(day).padStart(2,'0')}`;
-        if (!value || !["胡","苏","接"].includes(value)) scheduleMap.delete(key);
+        if (!value || !["胡","苏","胡苏"].includes(value)) scheduleMap.delete(key);
         else scheduleMap.set(key, value);
         saveToLocalStorage();
         renderMonthCalendar(currentYear, currentMonth);
@@ -371,18 +371,18 @@
     // 统计
     function updateStats(year, month) {
         const daysInMonth = new Date(year, month, 0).getDate();
-        let counts = { "胡":0, "苏":0, "接":0, "未排":0 };
+        let counts = { "胡":0, "苏":0, "胡苏":0, "未排":0 };
         for (let d=1; d<=daysInMonth; d++) {
             let val = getShift(year, month, d);
             if (val === "胡") counts["胡"]++;
             else if (val === "苏") counts["苏"]++;
-            else if (val === "接") counts["接"]++;
+            else if (val === "胡苏") counts["胡苏"]++;
             else counts["未排"]++;
         }
         document.getElementById("statsBar").innerHTML = `
-            <span class="stat-item stat-hu">胡斌: ${counts["胡"]}天</span>
-            <span class="stat-item stat-su">苏志强: ${counts["苏"]}天</span>
-            <span class="stat-item stat-jie">接: ${counts["接"]}天</span>
+            <span class="stat-item stat-hu">胡: ${counts["胡"]}天</span>
+            <span class="stat-item stat-su">苏: ${counts["苏"]}天</span>
+            <span class="stat-item stat-husu">胡苏: ${counts["胡苏"]}天</span>
             <span class="stat-item stat-none">未排: ${counts["未排"]}天</span>
         `;
     }
@@ -396,8 +396,8 @@
         if (!start || !end) return;
         let s = parseInt(start), e = parseInt(end);
         if (isNaN(s) || isNaN(e) || s<1 || e>daysInMonth || s>e) { alert("范围无效"); return; }
-        let type = prompt("班次 (胡 / 苏 / 接)", "胡");
-        if (!type || !["胡","苏","接"].includes(type)) { alert("班次必须是 胡、苏 或 接"); return; }
+        let type = prompt("班次 (胡 / 苏 / 胡苏)", "胡");
+        if (!type || !["胡","苏","胡苏"].includes(type)) { alert("班次必须是 胡、苏 或 胡苏"); return; }
         for (let d=s; d<=e; d++) setShift(year, month, d, type);
         renderMonthCalendar(year, month);
     }
@@ -448,7 +448,7 @@
                 let shiftClass = "shift-none";
                 if (shiftVal === "胡") shiftClass = "shift-hu";
                 else if (shiftVal === "苏") shiftClass = "shift-su";
-                else if (shiftVal === "接") shiftClass = "shift-jie";
+                else if (shiftVal === "胡苏") shiftClass = "shift-husu";
 
                 const weekend = isWeekend(year, month, dayNum);
                 const festivalNames = getFestivalNames(year, month, dayNum);
