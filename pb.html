@@ -113,6 +113,7 @@
         .stat-hu { color: #1f6392; }
         .stat-su { color: #2b7a2b; }
         .stat-husu { color: #c95a0f; }
+        .stat-none { color: #7f8c8d; }
         .weekdays {
             display: grid;
             grid-template-columns: repeat(7, 1fr);
@@ -144,18 +145,14 @@
             border-right: 1px solid #eaf0f7;
             min-height: 100px;
             transition: background 0.1s ease;
-            cursor: default;
+            cursor: pointer;
         }
         .day-cell:last-child { border-right: none; }
         .day-cell.shift-hu { background: #d6e6ff; }
         .day-cell.shift-su { background: #d0f0d0; }
         .day-cell.shift-husu { background: #ffe5cc; }
         .day-cell.shift-none { background: #ffffff; }
-        .click-zone {
-            flex: 1;
-            cursor: pointer;
-            min-height: 60px;
-        }
+        .day-cell:active { filter: brightness(0.97); }
         .day-number {
             display: flex;
             justify-content: space-between;
@@ -183,6 +180,7 @@
             color: #07456a;
             border-color: #9bc1e0;
         }
+        /* 今日日期超高亮 */
         .today-highlight {
             background: linear-gradient(145deg, #f9b81b, #ff8c00);
             color: white !important;
@@ -229,45 +227,13 @@
             text-align: center;
             border-top: 1px solid #d1e2f2;
         }
-        .staff-menu {
-            position: fixed;
-            background: rgba(255,255,255,0.96);
-            backdrop-filter: blur(8px);
-            border-radius: 48px;
-            box-shadow: 0 12px 28px rgba(0,0,0,0.2);
-            display: flex;
-            gap: 12px;
-            padding: 12px 16px;
-            z-index: 1000;
-            border: 1px solid #cde3f5;
-            opacity: 0;
-            transition: opacity 0.1s;
-            pointer-events: none;
-        }
-        .staff-menu.show {
-            opacity: 1;
-            pointer-events: auto;
-        }
-        .staff-menu button {
-            background: #f0f7ff;
-            border: none;
-            padding: 12px 24px;
-            border-radius: 40px;
-            font-size: 1.1rem;
-            font-weight: 600;
-            color: #1a6d9e;
-            cursor: pointer;
-            transition: 0.1s;
-            font-family: inherit;
-        }
-        .staff-menu button:active { transform: scale(0.96); background: #cde2f5; }
         @media (max-width: 550px) {
             .date-num { width: 26px; height: 26px; font-size: 0.85rem; }
             .day-cell { padding: 5px 3px; min-height: 88px; }
             .stat-item { font-size: 0.7rem; padding: 2px 8px; }
             .shift-name { font-size: 0.8rem; }
-            .staff-menu button { padding: 10px 20px; font-size: 1rem; }
         }
+        button { font-family: inherit; }
     </style>
 </head>
 <body>
@@ -287,290 +253,312 @@
         <span class="stat-item stat-hu">胡: 0天</span>
         <span class="stat-item stat-su">苏: 0天</span>
         <span class="stat-item stat-husu">胡苏: 0天</span>
+        <span class="stat-item stat-none">未排: 0天</span>
     </div>
     <div class="weekdays">
         <span>日</span><span>一</span><span>二</span><span>三</span><span>四</span><span>五</span><span>六</span>
     </div>
     <div class="calendar-grid" id="calendarGrid"></div>
     <div class="info-bar">
-        👆 点击日期格子中的空白区域，弹出按钮选择上班人员（胡 / 苏 / 胡苏）<br>
-        📌 法定节假日显示标签，周末显示<span class="rest-badge">休</span><br>
-        🔥 今日日期超高亮 · 📦 批量连填 · 💾 数据自动保存 · 📱 PWA支持
+        ✨ 点击任意日期格子循环切换：空白 → 胡 → 苏 → 胡苏 → 空白，并显示名字<br>
+        📌 法定节假日（元旦/清明/劳动/端午/中秋/国庆/春节）显示标签，周末显示<span class="rest-badge">休</span><br>
+        🔥 今日日期<span style="background:#f9b81b; color:white; padding:2px 6px; border-radius:30px;">超高亮</span><br>
+        📦 批量连填：选择起止日期，统一设为指定班次 · 数据自动保存 · 左右切换月份<br>
+        📱 已适配 PWA，添加到主屏幕后获得类似原生 App 体验
     </div>
 </div>
 
 <script>
-    // ---------- 核心数据 ----------
-    let scheduleMap = new Map();
+    // ---------- 配置 ----------
+    const SHIFT_CYCLE = ["", "胡", "苏", "胡苏"];  // 空字符串表示无排班（显示空白）
+    let scheduleMap = new Map();   // key: YYYY-MM-DD, value: "胡"/"苏"/"胡苏"/""
     let currentYear = new Date().getFullYear();
     let currentMonth = new Date().getMonth() + 1;
-    const STORAGE_KEY = "shift_ultra_fast";
+    const STORAGE_KEY = "shift_holiday_weekend_today_v2";
 
     // 存储
-    function load() {
+    function loadFromLocalStorage() {
         const stored = localStorage.getItem(STORAGE_KEY);
-        if (stored) { try { scheduleMap = new Map(Object.entries(JSON.parse(stored))); } catch(e) {} }
+        if (stored) {
+            try { scheduleMap = new Map(Object.entries(JSON.parse(stored))); } catch(e) {}
+        }
     }
-    function save() {
+    function saveToLocalStorage() {
         localStorage.setItem(STORAGE_KEY, JSON.stringify(Object.fromEntries(scheduleMap)));
     }
-    function getShift(y,m,d) {
-        return scheduleMap.get(`${y}-${String(m).padStart(2,'0')}-${String(d).padStart(2,'0')}`) || "";
+    function getShift(year, month, day) {
+        const key = `${year}-${String(month).padStart(2,'0')}-${String(day).padStart(2,'0')}`;
+        return scheduleMap.get(key) || "";
     }
-    function setShift(y,m,d,val) {
-        const key = `${y}-${String(m).padStart(2,'0')}-${String(d).padStart(2,'0')}`;
-        const old = scheduleMap.get(key) || "";
-        if (!val || !["胡","苏","胡苏"].includes(val)) scheduleMap.delete(key);
-        else scheduleMap.set(key, val);
-        save();
-        // 局部更新UI
-        updateDayCell(y,m,d, val);
-        updateStatsDelta(old, val);
+    function setShift(year, month, day, value) {
+        const key = `${year}-${String(month).padStart(2,'0')}-${String(day).padStart(2,'0')}`;
+        if (!value || !["胡","苏","胡苏"].includes(value)) scheduleMap.delete(key);
+        else scheduleMap.set(key, value);
+        saveToLocalStorage();
+        renderMonthCalendar(currentYear, currentMonth);
     }
 
-    // 局部更新单个日期格子
-    function updateDayCell(y,m,d, newVal) {
-        const cell = document.querySelector(`.day-cell[data-year='${y}'][data-month='${m}'][data-day='${d}']`);
-        if (!cell) return;
-        // 更新背景类
-        const shiftClass = newVal === "胡" ? "shift-hu" : (newVal === "苏" ? "shift-su" : (newVal === "胡苏" ? "shift-husu" : "shift-none"));
-        cell.classList.remove("shift-hu","shift-su","shift-husu","shift-none");
-        cell.classList.add(shiftClass);
-        // 更新姓名显示
-        let nameDiv = cell.querySelector('.shift-name');
-        if (newVal) {
-            if (nameDiv) nameDiv.textContent = newVal;
-            else {
-                const div = document.createElement('div');
-                div.className = 'shift-name';
-                div.textContent = newVal;
-                cell.appendChild(div);
-            }
-        } else {
-            if (nameDiv) nameDiv.remove();
-        }
+    // 循环切换
+    function cycleShift(year, month, day) {
+        const cur = getShift(year, month, day);
+        let idx = SHIFT_CYCLE.indexOf(cur);
+        let next = SHIFT_CYCLE[(idx + 1) % SHIFT_CYCLE.length];
+        setShift(year, month, day, next);
     }
 
-    // 增量更新统计栏 (oldVal, newVal)
-    let currentStats = { "胡":0, "苏":0, "胡苏":0 };
-    function initStats() {
-        const days = new Date(currentYear, currentMonth, 0).getDate();
-        currentStats = { "胡":0, "苏":0, "胡苏":0 };
-        for (let d=1; d<=days; d++) {
-            let v = getShift(currentYear, currentMonth, d);
-            if (v === "胡") currentStats["胡"]++;
-            else if (v === "苏") currentStats["苏"]++;
-            else if (v === "胡苏") currentStats["胡苏"]++;
-        }
-        updateStatsDisplay();
-    }
-    function updateStatsDelta(oldVal, newVal) {
-        if (oldVal === newVal) return;
-        if (oldVal === "胡") currentStats["胡"]--;
-        else if (oldVal === "苏") currentStats["苏"]--;
-        else if (oldVal === "胡苏") currentStats["胡苏"]--;
-        if (newVal === "胡") currentStats["胡"]++;
-        else if (newVal === "苏") currentStats["苏"]++;
-        else if (newVal === "胡苏") currentStats["胡苏"]++;
-        updateStatsDisplay();
-    }
-    function updateStatsDisplay() {
-        document.getElementById("statsBar").innerHTML = `
-            <span class="stat-item stat-hu">胡: ${currentStats["胡"]}天</span>
-            <span class="stat-item stat-su">苏: ${currentStats["苏"]}天</span>
-            <span class="stat-item stat-husu">胡苏: ${currentStats["胡苏"]}天</span>
-        `;
+    // ========== 精确节日映射 (2025~2075) ==========
+    const springFestivalMap = {
+        2025:[1,29],2026:[2,17],2027:[2,6],2028:[1,26],2029:[2,13],2030:[2,3],
+        2031:[1,23],2032:[2,11],2033:[1,31],2034:[2,19],2035:[2,8],2036:[1,28],
+        2037:[2,15],2038:[2,4],2039:[1,24],2040:[2,12],2041:[2,1],2042:[1,22],
+        2043:[2,10],2044:[1,30],2045:[2,17],2046:[2,6],2047:[1,26],2048:[2,14],
+        2049:[2,2],2050:[1,23],2051:[2,11],2052:[2,1],2053:[1,19],2054:[2,7],
+        2055:[1,28],2056:[2,15],2057:[2,4],2058:[1,24],2059:[2,12],2060:[2,2],
+        2061:[1,22],2062:[2,10],2063:[1,30],2064:[2,18],2065:[2,6],2066:[1,27],
+        2067:[2,15],2068:[2,4],2069:[1,23],2070:[2,11],2071:[1,31],2072:[2,19],
+        2073:[2,7],2074:[1,27],2075:[2,15]
+    };
+    const dragonBoatMap = {
+        2025:[5,31],2026:[6,19],2027:[6,8],2028:[5,28],2029:[6,16],2030:[6,5],
+        2031:[5,26],2032:[6,12],2033:[6,1],2034:[5,22],2035:[6,10],2036:[5,29],
+        2037:[6,17],2038:[6,6],2039:[5,27],2040:[6,14],2041:[6,3],2042:[5,24],
+        2043:[6,11],2044:[5,30],2045:[6,18],2046:[6,7],2047:[5,28],2048:[6,15],
+        2049:[6,4],2050:[5,25],2051:[6,12],2052:[5,31],2053:[6,19],2054:[6,8],
+        2055:[5,29],2056:[6,16],2057:[6,5],2058:[5,26],2059:[6,13],2060:[6,2],
+        2061:[5,22],2062:[6,10],2063:[5,31],2064:[6,18],2065:[6,7],2066:[5,28],
+        2067:[6,15],2068:[6,3],2069:[5,24],2070:[6,12],2071:[6,1],2072:[5,20],
+        2073:[6,8],2074:[5,29],2075:[6,17]
+    };
+    const midAutumnMap = {
+        2025:[10,6],2026:[9,26],2027:[9,15],2028:[10,3],2029:[9,22],2030:[9,11],
+        2031:[10,1],2032:[9,18],2033:[9,8],2034:[9,27],2035:[9,16],2036:[10,4],
+        2037:[9,23],2038:[9,13],2039:[10,2],2040:[9,20],2041:[9,9],2042:[9,28],
+        2043:[9,17],2044:[10,5],2045:[9,25],2046:[9,14],2047:[10,3],2048:[9,21],
+        2049:[9,10],2050:[9,30],2051:[9,19],2052:[10,6],2053:[9,26],2054:[9,15],
+        2055:[10,4],2056:[9,22],2057:[9,11],2058:[10,1],2059:[9,20],2060:[9,9],
+        2061:[9,28],2062:[9,17],2063:[10,6],2064:[9,24],2065:[9,13],2066:[10,2],
+        2067:[9,21],2068:[9,10],2069:[9,29],2070:[9,18],2071:[10,7],2072:[9,25],
+        2073:[9,14],2074:[10,3],2075:[9,22]
+    };
+    function getFestivalDate(map, year) {
+        if (map[year]) return { month: map[year][0], day: map[year][1] };
+        return null;
     }
 
-    // 节假日映射（精确）
-    const springMap = {2025:[1,29],2026:[2,17],2027:[2,6],2028:[1,26],2029:[2,13],2030:[2,3],2031:[1,23],2032:[2,11],2033:[1,31],2034:[2,19],2035:[2,8],2036:[1,28],2037:[2,15],2038:[2,4],2039:[1,24],2040:[2,12],2041:[2,1],2042:[1,22],2043:[2,10],2044:[1,30],2045:[2,17],2046:[2,6],2047:[1,26],2048:[2,14],2049:[2,2],2050:[1,23],2051:[2,11],2052:[2,1],2053:[1,19],2054:[2,7],2055:[1,28],2056:[2,15],2057:[2,4],2058:[1,24],2059:[2,12],2060:[2,2],2061:[1,22],2062:[2,10],2063:[1,30],2064:[2,18],2065:[2,6],2066:[1,27],2067:[2,15],2068:[2,4],2069:[1,23],2070:[2,11],2071:[1,31],2072:[2,19],2073:[2,7],2074:[1,27],2075:[2,15]};
-    const dragonMap = {2025:[5,31],2026:[6,19],2027:[6,8],2028:[5,28],2029:[6,16],2030:[6,5],2031:[5,26],2032:[6,12],2033:[6,1],2034:[5,22],2035:[6,10],2036:[5,29],2037:[6,17],2038:[6,6],2039:[5,27],2040:[6,14],2041:[6,3],2042:[5,24],2043:[6,11],2044:[5,30],2045:[6,18],2046:[6,7],2047:[5,28],2048:[6,15],2049:[6,4],2050:[5,25],2051:[6,12],2052:[5,31],2053:[6,19],2054:[6,8],2055:[5,29],2056:[6,16],2057:[6,5],2058:[5,26],2059:[6,13],2060:[6,2],2061:[5,22],2062:[6,10],2063:[5,31],2064:[6,18],2065:[6,7],2066:[5,28],2067:[6,15],2068:[6,3],2069:[5,24],2070:[6,12],2071:[6,1],2072:[5,20],2073:[6,8],2074:[5,29],2075:[6,17]};
-    const midMap = {2025:[10,6],2026:[9,26],2027:[9,15],2028:[10,3],2029:[9,22],2030:[9,11],2031:[10,1],2032:[9,18],2033:[9,8],2034:[9,27],2035:[9,16],2036:[10,4],2037:[9,23],2038:[9,13],2039:[10,2],2040:[9,20],2041:[9,9],2042:[9,28],2043:[9,17],2044:[10,5],2045:[9,25],2046:[9,14],2047:[10,3],2048:[9,21],2049:[9,10],2050:[9,30],2051:[9,19],2052:[10,6],2053:[9,26],2054:[9,15],2055:[10,4],2056:[9,22],2057:[9,11],2058:[10,1],2059:[9,20],2060:[9,9],2061:[9,28],2062:[9,17],2063:[10,6],2064:[9,24],2065:[9,13],2066:[10,2],2067:[9,21],2068:[9,10],2069:[9,29],2070:[9,18],2071:[10,7],2072:[9,25],2073:[9,14],2074:[10,3],2075:[9,22]};
-    function getFest(y,m,d) {
+    // 获取节日名称（仅法定假日）
+    function getFestivalNames(year, month, day) {
         const names = [];
-        if (m===1 && d===1) names.push("元旦");
-        if (m===5 && d===1) names.push("劳动节");
-        if (m===10 && d===1) names.push("国庆节");
-        let qm = ((y%4===0 && y%100!==0) || y%400===0) ? 4 : ((y%10===6||y%10===7)?5:4);
-        if (m===4 && d===qm) names.push("清明");
-        if (springMap[y] && springMap[y][0]===m && springMap[y][1]===d) names.push("春节");
-        if (dragonMap[y] && dragonMap[y][0]===m && dragonMap[y][1]===d) names.push("端午");
-        if (midMap[y] && midMap[y][0]===m && midMap[y][1]===d) names.push("中秋");
+        if (month===1 && day===1) names.push("元旦");
+        if (month===5 && day===1) names.push("劳动节");
+        if (month===10 && day===1) names.push("国庆节");
+        // 清明节 (4月4日或5日)
+        let qm = ((year%4===0 && year%100!==0) || year%400===0) ? 4 : ((year%10===6||year%10===7)?5:4);
+        if (month===4 && day===qm) names.push("清明");
+        const spring = getFestivalDate(springFestivalMap, year);
+        if (spring && month===spring.month && day===spring.day) names.push("春节");
+        const db = getFestivalDate(dragonBoatMap, year);
+        if (db && month===db.month && day===db.day) names.push("端午");
+        const ma = getFestivalDate(midAutumnMap, year);
+        if (ma && month===ma.month && day===ma.day) names.push("中秋");
         return names.slice(0,2);
     }
-    function isWeekend(y,m,d) {
-        const w = new Date(y,m-1,d).getDay();
+
+    function isWeekend(year, month, day) {
+        const w = new Date(year, month-1, day).getDay();
         return w===0 || w===6;
     }
 
-    // 渲染完整月历（首次加载或切换月份时调用）
-    function renderMonth(y,m) {
+    // 统计
+    function updateStats(year, month) {
+        const daysInMonth = new Date(year, month, 0).getDate();
+        let counts = { "胡":0, "苏":0, "胡苏":0, "未排":0 };
+        for (let d=1; d<=daysInMonth; d++) {
+            let val = getShift(year, month, d);
+            if (val === "胡") counts["胡"]++;
+            else if (val === "苏") counts["苏"]++;
+            else if (val === "胡苏") counts["胡苏"]++;
+            else counts["未排"]++;
+        }
+        document.getElementById("statsBar").innerHTML = `
+            <span class="stat-item stat-hu">胡: ${counts["胡"]}天</span>
+            <span class="stat-item stat-su">苏: ${counts["苏"]}天</span>
+            <span class="stat-item stat-husu">胡苏: ${counts["胡苏"]}天</span>
+            <span class="stat-item stat-none">未排: ${counts["未排"]}天</span>
+        `;
+    }
+
+    // 批量连填
+    function batchFill() {
+        const year = currentYear, month = currentMonth;
+        const daysInMonth = new Date(year, month, 0).getDate();
+        let start = prompt(`开始日期 (1-${daysInMonth})`, "1");
+        let end = prompt(`结束日期 (1-${daysInMonth})`, daysInMonth);
+        if (!start || !end) return;
+        let s = parseInt(start), e = parseInt(end);
+        if (isNaN(s) || isNaN(e) || s<1 || e>daysInMonth || s>e) { alert("范围无效"); return; }
+        let type = prompt("班次 (胡 / 苏 / 胡苏)", "胡");
+        if (!type || !["胡","苏","胡苏"].includes(type)) { alert("班次必须是 胡、苏 或 胡苏"); return; }
+        for (let d=s; d<=e; d++) setShift(year, month, d, type);
+        renderMonthCalendar(year, month);
+    }
+
+    // 渲染日历（今日超高亮）
+    function renderMonthCalendar(year, month) {
         const grid = document.getElementById("calendarGrid");
         if (!grid) return;
         const monthNames = ['1月','2月','3月','4月','5月','6月','7月','8月','9月','10月','11月','12月'];
-        document.getElementById("monthYearDisplay").innerText = `${y}年 ${monthNames[m-1]}`;
-        const firstDay = new Date(y,m-1,1);
-        const start = firstDay.getDay();
-        const daysInMonth = new Date(y,m,0).getDate();
+        document.getElementById("monthYearDisplay").innerText = `${year}年 ${monthNames[month-1]}`;
+
+        const firstDay = new Date(year, month-1, 1);
+        const startWeekday = firstDay.getDay();
+        const daysInMonth = new Date(year, month, 0).getDate();
+
+        // 获取今天的日期（用于高亮）
         const today = new Date();
-        const ty = today.getFullYear(), tm = today.getMonth()+1, td = today.getDate();
-        let weeks = [], dc=1;
+        const todayYear = today.getFullYear();
+        const todayMonth = today.getMonth() + 1;
+        const todayDay = today.getDate();
+
+        let weeks = [];
+        let dayCounter = 1;
         for (let i=0; i<42; i++) {
-            const wi = Math.floor(i/7);
-            if (!weeks[wi]) weeks[wi] = [];
-            if (i < start || dc > daysInMonth) weeks[wi].push({ day: null, valid: false });
-            else weeks[wi].push({ day: dc++, valid: true });
+            const weekIdx = Math.floor(i/7);
+            if (!weeks[weekIdx]) weeks[weekIdx] = [];
+            if (i < startWeekday || dayCounter > daysInMonth) {
+                weeks[weekIdx].push({ day: null, valid: false });
+            } else {
+                weeks[weekIdx].push({ day: dayCounter, valid: true });
+                dayCounter++;
+            }
         }
+
         let html = '';
-        for (let row of weeks) {
-            if (row.every(c => !c.valid)) continue;
+        for (let w=0; w<weeks.length; w++) {
+            const row = weeks[w];
+            if (row.every(cell => !cell.valid)) continue;
             html += `<div class="week-row">`;
-            for (let cell of row) {
-                if (!cell.valid) { html += `<div class="day-cell empty-cell"></div>`; continue; }
-                const d = cell.day;
-                const shiftVal = getShift(y,m,d);
+            for (let i=0; i<row.length; i++) {
+                const cell = row[i];
+                if (!cell.valid) {
+                    html += `<div class="day-cell empty-cell"></div>`;
+                    continue;
+                }
+                const dayNum = cell.day;
+                const shiftVal = getShift(year, month, dayNum);
                 let shiftClass = "shift-none";
                 if (shiftVal === "胡") shiftClass = "shift-hu";
                 else if (shiftVal === "苏") shiftClass = "shift-su";
                 else if (shiftVal === "胡苏") shiftClass = "shift-husu";
-                const weekend = isWeekend(y,m,d);
-                const fest = getFest(y,m,d);
-                let holidayHtml = fest.length ? `<span class="holiday-mini">${fest.join('·')}</span>` : '';
-                let dateClass = weekend ? "date-num weekend-date" : "date-num";
-                if (y===ty && m===tm && d===td) dateClass += " today-highlight";
-                const badge = weekend ? `<span class="rest-badge">休</span>` : '';
-                const nameHtml = shiftVal ? `<div class="shift-name">${shiftVal}</div>` : '';
+
+                const weekend = isWeekend(year, month, dayNum);
+                const festivalNames = getFestivalNames(year, month, dayNum);
+                let holidayHtml = festivalNames.length ? `<span class="holiday-mini">${festivalNames.join('·')}</span>` : '';
+                const showRest = weekend;
+                let dateNumClass = weekend ? "date-num weekend-date" : "date-num";
+                // 今日高亮判断
+                const isToday = (year === todayYear && month === todayMonth && dayNum === todayDay);
+                if (isToday) {
+                    dateNumClass += " today-highlight";
+                }
+                const badgeHtml = showRest ? `<span class="rest-badge">休</span>` : '';
+                const nameDisplay = shiftVal ? `<div class="shift-name">${shiftVal}</div>` : '';
+
                 html += `
-                    <div class="day-cell ${shiftClass}" data-year="${y}" data-month="${m}" data-day="${d}">
+                    <div class="day-cell ${shiftClass}" data-year="${year}" data-month="${month}" data-day="${dayNum}">
                         <div class="day-number">
-                            <span class="${dateClass}">${d}</span>
-                            <div style="display:flex; gap:4px; align-items:center;">${holidayHtml}${badge}</div>
+                            <span class="${dateNumClass}">${dayNum}</span>
+                            <div style="display: flex; gap: 4px; align-items: center;">
+                                ${holidayHtml}
+                                ${badgeHtml}
+                            </div>
                         </div>
-                        <div class="click-zone"></div>
-                        ${nameHtml}
+                        ${nameDisplay}
                     </div>
                 `;
             }
             html += `</div>`;
         }
         grid.innerHTML = html;
-        // 重新统计当前月份
-        const days = new Date(y,m,0).getDate();
-        currentStats = { "胡":0, "苏":0, "胡苏":0 };
-        for (let d=1; d<=days; d++) {
-            let v = getShift(y,m,d);
-            if (v === "胡") currentStats["胡"]++;
-            else if (v === "苏") currentStats["苏"]++;
-            else if (v === "胡苏") currentStats["胡苏"]++;
-        }
-        updateStatsDisplay();
+        updateStats(year, month);
     }
 
-    // 批量连填优化
-    function batchFill() {
-        const y = currentYear, m = currentMonth;
-        const days = new Date(y,m,0).getDate();
-        let s = parseInt(prompt(`开始日期 (1-${days})`, "1"));
-        let e = parseInt(prompt(`结束日期 (1-${days})`, days));
-        if (isNaN(s) || isNaN(e) || s<1 || e>days || s>e) { alert("范围无效"); return; }
-        let type = prompt("班次 (胡 / 苏 / 胡苏)", "胡");
-        if (!type || !["胡","苏","胡苏"].includes(type)) { alert("班次必须是 胡、苏 或 胡苏"); return; }
-        for (let d=s; d<=e; d++) {
-            const key = `${y}-${String(m).padStart(2,'0')}-${String(d).padStart(2,'0')}`;
-            const old = scheduleMap.get(key) || "";
-            if (type) scheduleMap.set(key, type);
-            updateDayCell(y,m,d, type);
-            updateStatsDelta(old, type);
-        }
-        save();
-    }
-
-    // 浮动菜单（单例）
-    let menu = null;
-    let pendingCell = null;
-    function ensureMenu() {
-        if (menu) return;
-        menu = document.createElement('div');
-        menu.className = 'staff-menu';
-        const b1 = document.createElement('button'); b1.textContent = '胡'; b1.onclick = () => { if(pendingCell) applyShift(pendingCell,'胡'); hideMenu(); };
-        const b2 = document.createElement('button'); b2.textContent = '苏'; b2.onclick = () => { if(pendingCell) applyShift(pendingCell,'苏'); hideMenu(); };
-        const b3 = document.createElement('button'); b3.textContent = '胡苏'; b3.onclick = () => { if(pendingCell) applyShift(pendingCell,'胡苏'); hideMenu(); };
-        menu.append(b1,b2,b3);
-        document.body.appendChild(menu);
-        document.addEventListener('click', (e) => {
-            if (menu.classList.contains('show') && !menu.contains(e.target)) hideMenu();
-        });
-    }
-    function showMenu(x,y,cell) {
-        ensureMenu();
-        pendingCell = cell;
-        menu.style.left = x + 'px';
-        menu.style.top = y + 'px';
-        const rect = menu.getBoundingClientRect();
-        if (rect.right > window.innerWidth) menu.style.left = (window.innerWidth - rect.width - 10) + 'px';
-        if (rect.bottom > window.innerHeight) menu.style.top = (window.innerHeight - rect.height - 10) + 'px';
-        menu.classList.add('show');
-    }
-    function hideMenu() {
-        menu.classList.remove('show');
-        pendingCell = null;
-    }
-    function applyShift(cell, val) {
-        const y = parseInt(cell.dataset.year), m = parseInt(cell.dataset.month), d = parseInt(cell.dataset.day);
-        setShift(y,m,d,val);
-    }
-
-    function setupEvents() {
+    // 事件委托处理点击
+    function setupDelegation() {
         const grid = document.getElementById("calendarGrid");
         grid.addEventListener('click', (e) => {
-            const zone = e.target.closest('.click-zone');
-            if (!zone) return;
-            const cell = zone.closest('.day-cell');
+            const cell = e.target.closest('.day-cell');
             if (!cell) return;
-            const rect = zone.getBoundingClientRect();
-            showMenu(rect.left + window.scrollX, rect.bottom + window.scrollY, cell);
+            if (!cell.hasAttribute('data-year')) return;
+            const year = parseInt(cell.dataset.year);
+            const month = parseInt(cell.dataset.month);
+            const day = parseInt(cell.dataset.day);
+            cycleShift(year, month, day);
         });
     }
 
     function changeMonth(delta) {
-        let nm = currentMonth + delta;
-        let ny = currentYear;
-        if (nm < 1) { nm = 12; ny--; }
-        if (nm > 12) { nm = 1; ny++; }
-        const base = new Date().getFullYear();
-        if (ny < base) ny = base;
-        if (ny > base+50) ny = base+50;
-        currentYear = ny;
-        currentMonth = nm;
-        renderMonth(currentYear, currentMonth);
-        hideMenu();
-    }
-    function goToday() {
-        const t = new Date();
-        currentYear = t.getFullYear();
-        currentMonth = t.getMonth() + 1;
-        renderMonth(currentYear, currentMonth);
-        hideMenu();
+        let newMonth = currentMonth + delta;
+        let newYear = currentYear;
+        if (newMonth < 1) { newMonth = 12; newYear--; }
+        if (newMonth > 12) { newMonth = 1; newYear++; }
+        const baseYear = new Date().getFullYear();
+        const maxYear = baseYear + 50;
+        if (newYear < baseYear) newYear = baseYear;
+        if (newYear > maxYear) newYear = maxYear;
+        currentYear = newYear;
+        currentMonth = Math.min(12, Math.max(1, newMonth));
+        renderMonthCalendar(currentYear, currentMonth);
     }
 
+    function goToToday() {
+        const today = new Date();
+        currentYear = today.getFullYear();
+        currentMonth = today.getMonth() + 1;
+        renderMonthCalendar(currentYear, currentMonth);
+    }
+
+    // 初始化：每次打开都显示当前月份，同时保留排班数据
     function init() {
-        load();
-        const t = new Date();
-        currentYear = t.getFullYear();
-        currentMonth = t.getMonth() + 1;
-        renderMonth(currentYear, currentMonth);
+        loadFromLocalStorage();
+        // 强制设置为当前年月，但保留之前存储的排班数据
+        const today = new Date();
+        currentYear = today.getFullYear();
+        currentMonth = today.getMonth() + 1;
         document.getElementById('prevMonthBtn').addEventListener('click', () => changeMonth(-1));
         document.getElementById('nextMonthBtn').addEventListener('click', () => changeMonth(1));
-        document.getElementById('todayBtn').addEventListener('click', goToday);
+        document.getElementById('todayBtn').addEventListener('click', goToToday);
         document.getElementById('batchFillBtn').addEventListener('click', batchFill);
-        setupEvents();
+        setupDelegation();
+        renderMonthCalendar(currentYear, currentMonth);
     }
+
+    // PWA Service Worker (简单缓存)
+    function installServiceWorker() {
+        if (!('serviceWorker' in navigator)) return;
+        const swCode = `
+            self.addEventListener('install', event => {
+                console.log('Service Worker 安装成功');
+                self.skipWaiting();
+            });
+            self.addEventListener('fetch', event => {
+                event.respondWith(
+                    caches.match(event.request).then(response => {
+                        return response || fetch(event.request);
+                    })
+                );
+            });
+        `;
+        const blob = new Blob([swCode], {type: 'application/javascript'});
+        const url = URL.createObjectURL(blob);
+        navigator.serviceWorker.register(url).then(reg => {
+            console.log('ServiceWorker 注册成功', reg);
+            URL.revokeObjectURL(url);
+        }).catch(err => console.log('ServiceWorker 注册失败，可能是非 HTTPS 环境', err));
+    }
+
     init();
-    // PWA service worker 可选
-    if ('serviceWorker' in navigator && (location.protocol === 'https:' || location.hostname === 'localhost')) {
-        const swCode = `self.addEventListener('install',e=>self.skipWaiting());self.addEventListener('fetch',e=>e.respondWith(caches.match(e.request).then(r=>r||fetch(e.request))))`;
-        const blob = new Blob([swCode], {type:'application/javascript'});
-        navigator.serviceWorker.register(URL.createObjectURL(blob)).then(r=>URL.revokeObjectURL(r)).catch(e=>{});
+    if (location.protocol === 'https:' || location.hostname === 'localhost' || location.hostname === '127.0.0.1') {
+        installServiceWorker();
     }
 </script>
 </body>
