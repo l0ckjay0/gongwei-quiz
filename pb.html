@@ -145,14 +145,18 @@
             border-right: 1px solid #eaf0f7;
             min-height: 100px;
             transition: background 0.1s ease;
-            cursor: pointer;
+            cursor: default;
         }
         .day-cell:last-child { border-right: none; }
         .day-cell.shift-hu { background: #d6e6ff; }
         .day-cell.shift-su { background: #d0f0d0; }
         .day-cell.shift-husu { background: #ffe5cc; }
         .day-cell.shift-none { background: #ffffff; }
-        .day-cell:active { filter: brightness(0.97); }
+        .click-zone {
+            flex: 1;
+            cursor: pointer;
+            min-height: 60px;
+        }
         .day-number {
             display: flex;
             justify-content: space-between;
@@ -180,7 +184,6 @@
             color: #07456a;
             border-color: #9bc1e0;
         }
-        /* 今日日期超高亮 */
         .today-highlight {
             background: linear-gradient(145deg, #f9b81b, #ff8c00);
             color: white !important;
@@ -253,30 +256,25 @@
         <span class="stat-item stat-hu">胡: 0天</span>
         <span class="stat-item stat-su">苏: 0天</span>
         <span class="stat-item stat-husu">胡苏: 0天</span>
-        <span class="stat-item stat-none">未排: 0天</span>
     </div>
     <div class="weekdays">
         <span>日</span><span>一</span><span>二</span><span>三</span><span>四</span><span>五</span><span>六</span>
     </div>
     <div class="calendar-grid" id="calendarGrid"></div>
     <div class="info-bar">
-        ✨ 点击任意日期格子循环切换：空白 → 胡 → 苏 → 胡苏 → 空白，并显示名字<br>
-        📌 法定节假日（元旦/清明/劳动/端午/中秋/国庆/春节）显示标签，周末显示<span class="rest-badge">休</span><br>
-        🔥 今日日期<span style="background:#f9b81b; color:white; padding:2px 6px; border-radius:30px;">超高亮</span><br>
-        📦 批量连填：选择起止日期，统一设为指定班次 · 数据自动保存 · 左右切换月份<br>
-        📱 已适配 PWA，添加到主屏幕后获得类似原生 App 体验
+        👆 点击日期格子中的空白区域，弹出选择框手动选择上班人员（胡 / 苏 / 胡苏）<br>
+        📌 法定节假日显示标签，周末显示<span class="rest-badge">休</span><br>
+        🔥 今日日期超高亮 · 📦 批量连填 · 💾 数据自动保存 · 📱 支持PWA添加到主屏幕
     </div>
 </div>
 
 <script>
-    // ---------- 配置 ----------
-    const SHIFT_CYCLE = ["", "胡", "苏", "胡苏"];  // 空字符串表示无排班（显示空白）
-    let scheduleMap = new Map();   // key: YYYY-MM-DD, value: "胡"/"苏"/"胡苏"/""
+    // 配置：仅三种排班状态，无“无”选项
+    let scheduleMap = new Map();
     let currentYear = new Date().getFullYear();
     let currentMonth = new Date().getMonth() + 1;
-    const STORAGE_KEY = "shift_holiday_weekend_today_v2";
+    const STORAGE_KEY = "shift_manual_no_none";
 
-    // 存储
     function loadFromLocalStorage() {
         const stored = localStorage.getItem(STORAGE_KEY);
         if (stored) {
@@ -292,21 +290,33 @@
     }
     function setShift(year, month, day, value) {
         const key = `${year}-${String(month).padStart(2,'0')}-${String(day).padStart(2,'0')}`;
-        if (!value || !["胡","苏","胡苏"].includes(value)) scheduleMap.delete(key);
-        else scheduleMap.set(key, value);
+        if (!value || !["胡","苏","胡苏"].includes(value)) {
+            // 如果传入无效值，则删除（表示空白）
+            scheduleMap.delete(key);
+        } else {
+            scheduleMap.set(key, value);
+        }
         saveToLocalStorage();
         renderMonthCalendar(currentYear, currentMonth);
     }
 
-    // 循环切换
-    function cycleShift(year, month, day) {
-        const cur = getShift(year, month, day);
-        let idx = SHIFT_CYCLE.indexOf(cur);
-        let next = SHIFT_CYCLE[(idx + 1) % SHIFT_CYCLE.length];
-        setShift(year, month, day, next);
+    function promptShiftChoice(year, month, day) {
+        let msg = "请选择上班人员：\n1 - 胡\n2 - 苏\n3 - 胡苏";
+        let input = prompt(msg, "1");
+        if (input === null) return;
+        let choice = input.trim();
+        let newValue = "";
+        if (choice === "1") newValue = "胡";
+        else if (choice === "2") newValue = "苏";
+        else if (choice === "3") newValue = "胡苏";
+        else {
+            alert("无效输入，请输入 1、2 或 3");
+            return;
+        }
+        setShift(year, month, day, newValue);
     }
 
-    // ========== 精确节日映射 (2025~2075) ==========
+    // 节日映射 (精确数据，仅展示标签)
     const springFestivalMap = {
         2025:[1,29],2026:[2,17],2027:[2,6],2028:[1,26],2029:[2,13],2030:[2,3],
         2031:[1,23],2032:[2,11],2033:[1,31],2034:[2,19],2035:[2,8],2036:[1,28],
@@ -344,14 +354,11 @@
         if (map[year]) return { month: map[year][0], day: map[year][1] };
         return null;
     }
-
-    // 获取节日名称（仅法定假日）
     function getFestivalNames(year, month, day) {
         const names = [];
         if (month===1 && day===1) names.push("元旦");
         if (month===5 && day===1) names.push("劳动节");
         if (month===10 && day===1) names.push("国庆节");
-        // 清明节 (4月4日或5日)
         let qm = ((year%4===0 && year%100!==0) || year%400===0) ? 4 : ((year%10===6||year%10===7)?5:4);
         if (month===4 && day===qm) names.push("清明");
         const spring = getFestivalDate(springFestivalMap, year);
@@ -362,32 +369,25 @@
         if (ma && month===ma.month && day===ma.day) names.push("中秋");
         return names.slice(0,2);
     }
-
     function isWeekend(year, month, day) {
         const w = new Date(year, month-1, day).getDay();
         return w===0 || w===6;
     }
-
-    // 统计
     function updateStats(year, month) {
         const daysInMonth = new Date(year, month, 0).getDate();
-        let counts = { "胡":0, "苏":0, "胡苏":0, "未排":0 };
+        let counts = { "胡":0, "苏":0, "胡苏":0 };
         for (let d=1; d<=daysInMonth; d++) {
             let val = getShift(year, month, d);
             if (val === "胡") counts["胡"]++;
             else if (val === "苏") counts["苏"]++;
             else if (val === "胡苏") counts["胡苏"]++;
-            else counts["未排"]++;
         }
         document.getElementById("statsBar").innerHTML = `
             <span class="stat-item stat-hu">胡: ${counts["胡"]}天</span>
             <span class="stat-item stat-su">苏: ${counts["苏"]}天</span>
             <span class="stat-item stat-husu">胡苏: ${counts["胡苏"]}天</span>
-            <span class="stat-item stat-none">未排: ${counts["未排"]}天</span>
         `;
     }
-
-    // 批量连填
     function batchFill() {
         const year = currentYear, month = currentMonth;
         const daysInMonth = new Date(year, month, 0).getDate();
@@ -401,24 +401,18 @@
         for (let d=s; d<=e; d++) setShift(year, month, d, type);
         renderMonthCalendar(year, month);
     }
-
-    // 渲染日历（今日超高亮）
     function renderMonthCalendar(year, month) {
         const grid = document.getElementById("calendarGrid");
         if (!grid) return;
         const monthNames = ['1月','2月','3月','4月','5月','6月','7月','8月','9月','10月','11月','12月'];
         document.getElementById("monthYearDisplay").innerText = `${year}年 ${monthNames[month-1]}`;
-
         const firstDay = new Date(year, month-1, 1);
         const startWeekday = firstDay.getDay();
         const daysInMonth = new Date(year, month, 0).getDate();
-
-        // 获取今天的日期（用于高亮）
         const today = new Date();
         const todayYear = today.getFullYear();
         const todayMonth = today.getMonth() + 1;
         const todayDay = today.getDate();
-
         let weeks = [];
         let dayCounter = 1;
         for (let i=0; i<42; i++) {
@@ -431,7 +425,6 @@
                 dayCounter++;
             }
         }
-
         let html = '';
         for (let w=0; w<weeks.length; w++) {
             const row = weeks[w];
@@ -449,20 +442,15 @@
                 if (shiftVal === "胡") shiftClass = "shift-hu";
                 else if (shiftVal === "苏") shiftClass = "shift-su";
                 else if (shiftVal === "胡苏") shiftClass = "shift-husu";
-
                 const weekend = isWeekend(year, month, dayNum);
                 const festivalNames = getFestivalNames(year, month, dayNum);
                 let holidayHtml = festivalNames.length ? `<span class="holiday-mini">${festivalNames.join('·')}</span>` : '';
                 const showRest = weekend;
                 let dateNumClass = weekend ? "date-num weekend-date" : "date-num";
-                // 今日高亮判断
                 const isToday = (year === todayYear && month === todayMonth && dayNum === todayDay);
-                if (isToday) {
-                    dateNumClass += " today-highlight";
-                }
+                if (isToday) dateNumClass += " today-highlight";
                 const badgeHtml = showRest ? `<span class="rest-badge">休</span>` : '';
                 const nameDisplay = shiftVal ? `<div class="shift-name">${shiftVal}</div>` : '';
-
                 html += `
                     <div class="day-cell ${shiftClass}" data-year="${year}" data-month="${month}" data-day="${dayNum}">
                         <div class="day-number">
@@ -472,6 +460,7 @@
                                 ${badgeHtml}
                             </div>
                         </div>
+                        <div class="click-zone"></div>
                         ${nameDisplay}
                     </div>
                 `;
@@ -481,21 +470,20 @@
         grid.innerHTML = html;
         updateStats(year, month);
     }
-
-    // 事件委托处理点击
     function setupDelegation() {
         const grid = document.getElementById("calendarGrid");
         grid.addEventListener('click', (e) => {
-            const cell = e.target.closest('.day-cell');
+            let zone = e.target.closest('.click-zone');
+            if (!zone) return;
+            let cell = zone.closest('.day-cell');
             if (!cell) return;
-            if (!cell.hasAttribute('data-year')) return;
             const year = parseInt(cell.dataset.year);
             const month = parseInt(cell.dataset.month);
             const day = parseInt(cell.dataset.day);
-            cycleShift(year, month, day);
+            if (isNaN(year) || isNaN(month) || isNaN(day)) return;
+            promptShiftChoice(year, month, day);
         });
     }
-
     function changeMonth(delta) {
         let newMonth = currentMonth + delta;
         let newYear = currentYear;
@@ -509,18 +497,21 @@
         currentMonth = Math.min(12, Math.max(1, newMonth));
         renderMonthCalendar(currentYear, currentMonth);
     }
-
     function goToToday() {
         const today = new Date();
         currentYear = today.getFullYear();
         currentMonth = today.getMonth() + 1;
         renderMonthCalendar(currentYear, currentMonth);
     }
-
-    // 初始化：每次打开都显示当前月份，同时保留排班数据
+    function installServiceWorker() {
+        if (!('serviceWorker' in navigator)) return;
+        const swCode = `self.addEventListener('install',e=>{self.skipWaiting()});self.addEventListener('fetch',e=>{e.respondWith(caches.match(e.request).then(r=>r||fetch(e.request)))})`;
+        const blob = new Blob([swCode], {type: 'application/javascript'});
+        const url = URL.createObjectURL(blob);
+        navigator.serviceWorker.register(url).then(reg => URL.revokeObjectURL(url)).catch(()=>{});
+    }
     function init() {
         loadFromLocalStorage();
-        // 强制设置为当前年月，但保留之前存储的排班数据
         const today = new Date();
         currentYear = today.getFullYear();
         currentMonth = today.getMonth() + 1;
@@ -531,35 +522,8 @@
         setupDelegation();
         renderMonthCalendar(currentYear, currentMonth);
     }
-
-    // PWA Service Worker (简单缓存)
-    function installServiceWorker() {
-        if (!('serviceWorker' in navigator)) return;
-        const swCode = `
-            self.addEventListener('install', event => {
-                console.log('Service Worker 安装成功');
-                self.skipWaiting();
-            });
-            self.addEventListener('fetch', event => {
-                event.respondWith(
-                    caches.match(event.request).then(response => {
-                        return response || fetch(event.request);
-                    })
-                );
-            });
-        `;
-        const blob = new Blob([swCode], {type: 'application/javascript'});
-        const url = URL.createObjectURL(blob);
-        navigator.serviceWorker.register(url).then(reg => {
-            console.log('ServiceWorker 注册成功', reg);
-            URL.revokeObjectURL(url);
-        }).catch(err => console.log('ServiceWorker 注册失败，可能是非 HTTPS 环境', err));
-    }
-
     init();
-    if (location.protocol === 'https:' || location.hostname === 'localhost' || location.hostname === '127.0.0.1') {
-        installServiceWorker();
-    }
+    if (location.protocol === 'https:' || location.hostname === 'localhost' || location.hostname === '127.0.0.1') installServiceWorker();
 </script>
 </body>
 </html>
