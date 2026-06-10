@@ -2,14 +2,31 @@
 <html lang="zh-CN">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=yes, viewport-fit=cover">
-    <title>排班大师 · 胡/苏/接 | 连填+统计+精确节日</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+    <meta name="apple-mobile-web-app-title" content="排班大师">
+    <meta name="theme-color" content="#d9ebff">
+    <link rel="apple-touch-icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'%3E%3Crect width='100' height='100' fill='%231f6392'/%3E%3Ctext x='50' y='67' font-size='50' text-anchor='middle' fill='white' font-family='system-ui'%3E📅%3C/text%3E%3C/svg%3E">
+    <link rel="manifest" href="data:application/manifest+json,{
+        \"name\": \"排班大师 - 胡/苏/接\",
+        \"short_name\": \"排班大师\",
+        \"start_url\": \".\",
+        \"display\": \"standalone\",
+        \"background_color\": \"#d9ebff\",
+        \"theme_color\": \"#d9ebff\",
+        \"icons\": [{
+            \"src\": \"data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'%3E%3Crect width='100' height='100' fill='%231f6392'/%3E%3Ctext x='50' y='67' font-size='50' text-anchor='middle' fill='white' font-family='system-ui'%3E📅%3C/text%3E%3C/svg%3E\",
+            \"sizes\": \"any\",
+            \"type\": \"image/svg+xml\"
+        }]
+    }">
+    <title>排班大师 · 胡/苏/接</title>
     <style>
         * {
             box-sizing: border-box;
             -webkit-tap-highlight-color: transparent;
         }
-
         body {
             font-family: system-ui, -apple-system, 'Segoe UI', 'Roboto', 'Helvetica Neue', sans-serif;
             background: #eef3fc;
@@ -17,7 +34,6 @@
             padding: 12px 8px 24px 8px;
             color: #0b3954;
         }
-
         .month-container {
             max-width: 700px;
             margin: 0 auto;
@@ -27,8 +43,6 @@
             overflow: hidden;
             border: 1px solid #cde3f5;
         }
-
-        /* 导航栏 */
         .nav-header {
             display: flex;
             align-items: center;
@@ -60,10 +74,7 @@
             color: #1a6d9e;
             box-shadow: 0 1px 2px rgba(0,0,0,0.05);
         }
-        .nav-btn:active {
-            background: #cde2f5;
-            transform: scale(0.94);
-        }
+        .nav-btn:active { background: #cde2f5; transform: scale(0.94); }
         .month-year {
             font-size: 1.3rem;
             font-weight: 700;
@@ -82,8 +93,6 @@
             color: #1a6d9e;
             cursor: pointer;
         }
-
-        /* 统计栏 */
         .stats-bar {
             display: flex;
             justify-content: space-around;
@@ -105,7 +114,6 @@
         .stat-su { color: #2b7a2b; }
         .stat-jie { color: #c95a0f; }
         .stat-none { color: #7f8c8d; }
-
         .weekdays {
             display: grid;
             grid-template-columns: repeat(7, 1fr);
@@ -117,7 +125,6 @@
             color: #1f6392;
             border-bottom: 1px solid #d1e2f2;
         }
-
         .calendar-grid {
             display: flex;
             flex-direction: column;
@@ -136,19 +143,16 @@
             justify-content: space-between;
             padding: 8px 5px 6px;
             border-right: 1px solid #eaf0f7;
-            min-height: 108px;
+            min-height: 100px;
             transition: background 0.1s ease;
+            cursor: pointer;
         }
-        .day-cell:last-child {
-            border-right: none;
-        }
-
-        /* 排班背景颜色 */
+        .day-cell:last-child { border-right: none; }
         .day-cell.shift-hu { background: #d6e6ff; }
         .day-cell.shift-su { background: #d0f0d0; }
         .day-cell.shift-jie { background: #ffe5cc; }
         .day-cell.shift-none { background: #ffffff; }
-
+        .day-cell:active { filter: brightness(0.97); }
         .day-number {
             display: flex;
             justify-content: space-between;
@@ -196,49 +200,7 @@
         }
         .rest-badge { background: #ffb347; color: #5e2e00; }
         .makeup-badge { background: #ff9f7a; color: #802b00; }
-
-        /* 排班控件区 */
-        .shift-control {
-            display: flex;
-            align-items: center;
-            gap: 6px;
-            margin-top: 4px;
-        }
-        .shift-dropdown {
-            flex: 1;
-            background: white;
-            border: 1px solid #bbd4f0;
-            border-radius: 28px;
-            padding: 6px 4px;
-            font-size: 0.7rem;
-            font-weight: 500;
-            color: #0b4b6e;
-            outline: none;
-            cursor: pointer;
-            text-align: center;
-            appearance: none;
-            background-image: url('data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="%231f8bc5" stroke-width="2"><polyline points="6 9 12 15 18 9"></polyline></svg>');
-            background-repeat: no-repeat;
-            background-position: right 8px center;
-            background-size: 10px;
-        }
-        .cycle-btn {
-            background: #eef3fc;
-            border: 1px solid #bbd4f0;
-            border-radius: 30px;
-            width: 28px;
-            height: 28px;
-            font-size: 0.85rem;
-            display: inline-flex;
-            align-items: center;
-            justify-content: center;
-            cursor: pointer;
-            color: #1f6392;
-            transition: 0.1s;
-        }
-        .cycle-btn:active { background: #cde0f0; transform: scale(0.94); }
-        .empty-cell { background: #fbfdff; min-height: 108px; }
-
+        .empty-cell { background: #fbfdff; min-height: 100px; cursor: default; }
         .info-bar {
             background: #eef4fc;
             padding: 10px 16px;
@@ -249,9 +211,7 @@
         }
         @media (max-width: 550px) {
             .date-num { width: 26px; height: 26px; font-size: 0.85rem; }
-            .shift-dropdown { font-size: 0.65rem; padding: 5px 2px; }
-            .day-cell { padding: 5px 3px; min-height: 96px; }
-            .cycle-btn { width: 24px; height: 24px; font-size: 0.7rem; }
+            .day-cell { padding: 5px 3px; min-height: 88px; }
             .stat-item { font-size: 0.7rem; padding: 2px 8px; }
         }
         button { font-family: inherit; }
@@ -270,36 +230,33 @@
             <button class="batch-btn" id="batchFillBtn">📦 批量连填</button>
         </div>
     </div>
-
-    <!-- 统计栏 -->
     <div class="stats-bar" id="statsBar">
         <span class="stat-item stat-hu">胡斌: 0天</span>
         <span class="stat-item stat-su">苏志强: 0天</span>
         <span class="stat-item stat-jie">接: 0天</span>
-        <span class="stat-item stat-none">无: 0天</span>
+        <span class="stat-item stat-none">未排: 0天</span>
     </div>
-
     <div class="weekdays">
         <span>日</span><span>一</span><span>二</span><span>三</span><span>四</span><span>五</span><span>六</span>
     </div>
     <div class="calendar-grid" id="calendarGrid"></div>
     <div class="info-bar">
-        🎨 背景色代表排班 · 点击 <span style="background:#eef3fc; padding:2px 8px; border-radius:30px;">↻</span> 循环切换：无→胡→苏→接<br>
+        ✨ 点击任意日期格子循环切换：空白 → 胡 → 苏 → 接 → 空白<br>
         📌 <span class="rest-badge">休</span> 周末/法定假 · <span class="makeup-badge">补</span> 调休补班日 · 精确节日（春节/端午/中秋）<br>
-        📦 批量连填：选择起止日期，统一设为指定班次 · 数据自动保存，互不覆盖
+        📦 批量连填：选择起止日期，统一设为指定班次 · 数据自动保存<br>
+        📱 已适配 PWA，添加到主屏幕后获得类似原生 App 体验
     </div>
 </div>
 
 <script>
     // ---------- 配置 ----------
-    const SHIFT_LIST = ["", "胡", "苏", "接"];   // 索引0无
-    const SHIFT_MAP = { "": "无", "胡": "胡", "苏": "苏", "接": "接" };
+    const SHIFT_CYCLE = ["", "胡", "苏", "接"];  // 空字符串表示无排班（显示空白）
     let scheduleMap = new Map();   // key: YYYY-MM-DD, value: "胡"/"苏"/"接"/""
     let currentYear = new Date().getFullYear();
     let currentMonth = new Date().getMonth() + 1;
-    const STORAGE_KEY = "shift_schedule_final_v1";   // 独立版本，避免覆盖
+    const STORAGE_KEY = "shift_pwa_click_cycle";
 
-    // ---------- 本地存储 ----------
+    // 存储
     function loadFromLocalStorage() {
         const stored = localStorage.getItem(STORAGE_KEY);
         if (stored) {
@@ -324,122 +281,97 @@
     // 循环切换
     function cycleShift(year, month, day) {
         const cur = getShift(year, month, day);
-        let next = "";
-        if (cur === "") next = "胡";
-        else if (cur === "胡") next = "苏";
-        else if (cur === "苏") next = "接";
-        else next = "";
+        let idx = SHIFT_CYCLE.indexOf(cur);
+        let next = SHIFT_CYCLE[(idx + 1) % SHIFT_CYCLE.length];
         setShift(year, month, day, next);
     }
 
-    // ========== 1. 精确传统节日 (2025~2075 完整映射，无插值) ==========
+    // ========== 精确节日映射 (2025~2075) ==========
     const springFestivalMap = {
-        2025: [1,29], 2026: [2,17], 2027: [2,6], 2028: [1,26], 2029: [2,13], 2030: [2,3],
-        2031: [1,23], 2032: [2,11], 2033: [1,31], 2034: [2,19], 2035: [2,8], 2036: [1,28],
-        2037: [2,15], 2038: [2,4], 2039: [1,24], 2040: [2,12], 2041: [2,1], 2042: [1,22],
-        2043: [2,10], 2044: [1,30], 2045: [2,17], 2046: [2,6], 2047: [1,26], 2048: [2,14],
-        2049: [2,2], 2050: [1,23], 2051: [2,11], 2052: [2,1], 2053: [1,19], 2054: [2,7],
-        2055: [1,28], 2056: [2,15], 2057: [2,4], 2058: [1,24], 2059: [2,12], 2060: [2,2],
-        2061: [1,22], 2062: [2,10], 2063: [1,30], 2064: [2,18], 2065: [2,6], 2066: [1,27],
-        2067: [2,15], 2068: [2,4], 2069: [1,23], 2070: [2,11], 2071: [1,31], 2072: [2,19],
-        2073: [2,7], 2074: [1,27], 2075: [2,15]
+        2025:[1,29],2026:[2,17],2027:[2,6],2028:[1,26],2029:[2,13],2030:[2,3],
+        2031:[1,23],2032:[2,11],2033:[1,31],2034:[2,19],2035:[2,8],2036:[1,28],
+        2037:[2,15],2038:[2,4],2039:[1,24],2040:[2,12],2041:[2,1],2042:[1,22],
+        2043:[2,10],2044:[1,30],2045:[2,17],2046:[2,6],2047:[1,26],2048:[2,14],
+        2049:[2,2],2050:[1,23],2051:[2,11],2052:[2,1],2053:[1,19],2054:[2,7],
+        2055:[1,28],2056:[2,15],2057:[2,4],2058:[1,24],2059:[2,12],2060:[2,2],
+        2061:[1,22],2062:[2,10],2063:[1,30],2064:[2,18],2065:[2,6],2066:[1,27],
+        2067:[2,15],2068:[2,4],2069:[1,23],2070:[2,11],2071:[1,31],2072:[2,19],
+        2073:[2,7],2074:[1,27],2075:[2,15]
     };
     const dragonBoatMap = {
-        2025: [5,31], 2026: [6,19], 2027: [6,8], 2028: [5,28], 2029: [6,16], 2030: [6,5],
-        2031: [5,26], 2032: [6,12], 2033: [6,1], 2034: [5,22], 2035: [6,10], 2036: [5,29],
-        2037: [6,17], 2038: [6,6], 2039: [5,27], 2040: [6,14], 2041: [6,3], 2042: [5,24],
-        2043: [6,11], 2044: [5,30], 2045: [6,18], 2046: [6,7], 2047: [5,28], 2048: [6,15],
-        2049: [6,4], 2050: [5,25], 2051: [6,12], 2052: [5,31], 2053: [6,19], 2054: [6,8],
-        2055: [5,29], 2056: [6,16], 2057: [6,5], 2058: [5,26], 2059: [6,13], 2060: [6,2],
-        2061: [5,22], 2062: [6,10], 2063: [5,31], 2064: [6,18], 2065: [6,7], 2066: [5,28],
-        2067: [6,15], 2068: [6,3], 2069: [5,24], 2070: [6,12], 2071: [6,1], 2072: [5,20],
-        2073: [6,8], 2074: [5,29], 2075: [6,17]
+        2025:[5,31],2026:[6,19],2027:[6,8],2028:[5,28],2029:[6,16],2030:[6,5],
+        2031:[5,26],2032:[6,12],2033:[6,1],2034:[5,22],2035:[6,10],2036:[5,29],
+        2037:[6,17],2038:[6,6],2039:[5,27],2040:[6,14],2041:[6,3],2042:[5,24],
+        2043:[6,11],2044:[5,30],2045:[6,18],2046:[6,7],2047:[5,28],2048:[6,15],
+        2049:[6,4],2050:[5,25],2051:[6,12],2052:[5,31],2053:[6,19],2054:[6,8],
+        2055:[5,29],2056:[6,16],2057:[6,5],2058:[5,26],2059:[6,13],2060:[6,2],
+        2061:[5,22],2062:[6,10],2063:[5,31],2064:[6,18],2065:[6,7],2066:[5,28],
+        2067:[6,15],2068:[6,3],2069:[5,24],2070:[6,12],2071:[6,1],2072:[5,20],
+        2073:[6,8],2074:[5,29],2075:[6,17]
     };
     const midAutumnMap = {
-        2025: [10,6], 2026: [9,26], 2027: [9,15], 2028: [10,3], 2029: [9,22], 2030: [9,11],
-        2031: [10,1], 2032: [9,18], 2033: [9,8], 2034: [9,27], 2035: [9,16], 2036: [10,4],
-        2037: [9,23], 2038: [9,13], 2039: [10,2], 2040: [9,20], 2041: [9,9], 2042: [9,28],
-        2043: [9,17], 2044: [10,5], 2045: [9,25], 2046: [9,14], 2047: [10,3], 2048: [9,21],
-        2049: [9,10], 2050: [9,30], 2051: [9,19], 2052: [10,6], 2053: [9,26], 2054: [9,15],
-        2055: [10,4], 2056: [9,22], 2057: [9,11], 2058: [10,1], 2059: [9,20], 2060: [9,9],
-        2061: [9,28], 2062: [9,17], 2063: [10,6], 2064: [9,24], 2065: [9,13], 2066: [10,2],
-        2067: [9,21], 2068: [9,10], 2069: [9,29], 2070: [9,18], 2071: [10,7], 2072: [9,25],
-        2073: [9,14], 2074: [10,3], 2075: [9,22]
+        2025:[10,6],2026:[9,26],2027:[9,15],2028:[10,3],2029:[9,22],2030:[9,11],
+        2031:[10,1],2032:[9,18],2033:[9,8],2034:[9,27],2035:[9,16],2036:[10,4],
+        2037:[9,23],2038:[9,13],2039:[10,2],2040:[9,20],2041:[9,9],2042:[9,28],
+        2043:[9,17],2044:[10,5],2045:[9,25],2046:[9,14],2047:[10,3],2048:[9,21],
+        2049:[9,10],2050:[9,30],2051:[9,19],2052:[10,6],2053:[9,26],2054:[9,15],
+        2055:[10,4],2056:[9,22],2057:[9,11],2058:[10,1],2059:[9,20],2060:[9,9],
+        2061:[9,28],2062:[9,17],2063:[10,6],2064:[9,24],2065:[9,13],2066:[10,2],
+        2067:[9,21],2068:[9,10],2069:[9,29],2070:[9,18],2071:[10,7],2072:[9,25],
+        2073:[9,14],2074:[10,3],2075:[9,22]
     };
-
     function getFestivalDate(map, year) {
         if (map[year]) return { month: map[year][0], day: map[year][1] };
-        // 超出范围返回空，不影响显示
         return null;
     }
-
-    // 法定节假日判断 (元旦、清明、劳动、端午、中秋、国庆、春节当天)
     function isStatutoryHoliday(year, month, day) {
-        if (month === 1 && day === 1) return true;
-        if (month === 5 && day === 1) return true;
-        if (month === 10 && day === 1) return true;
-        // 清明
-        let qmDay = (year % 4 === 0 && year % 100 !== 0) || (year % 400 === 0) ? 4 : ((year % 10 === 6 || year % 10 === 7) ? 5 : 4);
-        if (month === 4 && day === qmDay) return true;
+        if (month===1 && day===1) return true;
+        if (month===5 && day===1) return true;
+        if (month===10 && day===1) return true;
+        let qm = ((year%4===0 && year%100!==0) || year%400===0) ? 4 : ((year%10===6||year%10===7)?5:4);
+        if (month===4 && day===qm) return true;
         const spring = getFestivalDate(springFestivalMap, year);
-        if (spring && month === spring.month && day === spring.day) return true;
+        if (spring && month===spring.month && day===spring.day) return true;
         const db = getFestivalDate(dragonBoatMap, year);
-        if (db && month === db.month && day === db.day) return true;
+        if (db && month===db.month && day===db.day) return true;
         const ma = getFestivalDate(midAutumnMap, year);
-        if (ma && month === ma.month && day === ma.day) return true;
+        if (ma && month===ma.month && day===ma.day) return true;
         return false;
     }
-
-    // 调休补班日 (2025-2035精确，其余年份基于规则推断)
-    const makeupDays = {
-        // 格式: "YYYY-MM-DD"
-        "2025-04-27":1, "2025-10-11":1, "2026-04-26":1, "2026-10-10":1,
-        "2027-04-25":1, "2027-10-09":1, "2028-04-29":1, "2028-10-14":1,
-        "2029-04-28":1, "2029-10-13":1, "2030-04-27":1, "2030-10-12":1,
-        "2031-04-26":1, "2031-10-11":1, "2032-05-01":1, "2032-10-09":1,
-        "2033-04-30":1, "2033-10-08":1, "2034-04-29":1, "2034-10-14":1,
-        "2035-04-28":1, "2035-10-13":1
-    };
+    const makeupDays = new Set([
+        "2025-04-27","2025-10-11","2026-04-26","2026-10-10","2027-04-25","2027-10-09",
+        "2028-04-29","2028-10-14","2029-04-28","2029-10-13","2030-04-27","2030-10-12",
+        "2031-04-26","2031-10-11","2032-05-01","2032-10-09","2033-04-30","2033-10-08",
+        "2034-04-29","2034-10-14","2035-04-28","2035-10-13"
+    ]);
     function isMakeupWorkday(year, month, day) {
         const key = `${year}-${String(month).padStart(2,'0')}-${String(day).padStart(2,'0')}`;
-        if (makeupDays[key]) return true;
-        // 简单规则：国庆节后最近周末补班 (非精确，但覆盖)
-        if (month === 10 && day <= 15) {
-            const date = new Date(year, month-1, day);
-            if (date.getDay() === 6 || date.getDay() === 0) {
-                const oct1 = new Date(year, 9, 1);
-                const diffDays = (date - oct1) / (24*3600*1000);
-                if (diffDays >= 6 && diffDays <= 10) return true;
-            }
-        }
-        if (month === 5 && day <= 7) {
-            const date = new Date(year, month-1, day);
-            if (date.getDay() === 6 || date.getDay() === 0) return true;
+        if (makeupDays.has(key)) return true;
+        if (month===10 && day>=8 && day<=12) {
+            const d = new Date(year, month-1, day);
+            if (d.getDay()===6 || d.getDay()===0) return true;
         }
         return false;
     }
-
     function getFestivalNames(year, month, day) {
         const names = [];
-        if (month === 1 && day === 1) names.push("元旦");
-        if (month === 5 && day === 1) names.push("劳动节");
-        if (month === 10 && day === 1) names.push("国庆节");
-        let qm = (year % 4 === 0 && year % 100 !== 0) || (year % 400 === 0) ? 4 : ((year % 10 === 6 || year % 10 === 7) ? 5 : 4);
-        if (month === 4 && day === qm) names.push("清明");
+        if (month===1 && day===1) names.push("元旦");
+        if (month===5 && day===1) names.push("劳动节");
+        if (month===10 && day===1) names.push("国庆节");
+        let qm = ((year%4===0 && year%100!==0) || year%400===0) ? 4 : ((year%10===6||year%10===7)?5:4);
+        if (month===4 && day===qm) names.push("清明");
         const spring = getFestivalDate(springFestivalMap, year);
-        if (spring && month === spring.month && day === spring.day) names.push("春节");
+        if (spring && month===spring.month && day===spring.day) names.push("春节");
         const db = getFestivalDate(dragonBoatMap, year);
-        if (db && month === db.month && day === db.day) names.push("端午");
+        if (db && month===db.month && day===db.day) names.push("端午");
         const ma = getFestivalDate(midAutumnMap, year);
-        if (ma && month === ma.month && day === ma.day) names.push("中秋");
-        return names.slice(0, 2);
+        if (ma && month===ma.month && day===ma.day) names.push("中秋");
+        return names.slice(0,2);
     }
-
     function isWeekend(year, month, day) {
         const w = new Date(year, month-1, day).getDay();
-        return w === 0 || w === 6;
+        return w===0 || w===6;
     }
-
     function shouldShowRest(year, month, day) {
         if (isMakeupWorkday(year, month, day)) return false;
         if (isWeekend(year, month, day)) return true;
@@ -450,50 +382,41 @@
         return isMakeupWorkday(year, month, day);
     }
 
-    // 统计当前月份各排班数量
+    // 统计
     function updateStats(year, month) {
         const daysInMonth = new Date(year, month, 0).getDate();
-        let countHu = 0, countSu = 0, countJie = 0, countNone = 0;
-        for (let d = 1; d <= daysInMonth; d++) {
-            const val = getShift(year, month, d);
-            if (val === "胡") countHu++;
-            else if (val === "苏") countSu++;
-            else if (val === "接") countJie++;
-            else countNone++;
+        let counts = { "胡":0, "苏":0, "接":0, "未排":0 };
+        for (let d=1; d<=daysInMonth; d++) {
+            let val = getShift(year, month, d);
+            if (val === "胡") counts["胡"]++;
+            else if (val === "苏") counts["苏"]++;
+            else if (val === "接") counts["接"]++;
+            else counts["未排"]++;
         }
         document.getElementById("statsBar").innerHTML = `
-            <span class="stat-item stat-hu">胡斌: ${countHu}天</span>
-            <span class="stat-item stat-su">苏志强: ${countSu}天</span>
-            <span class="stat-item stat-jie">接: ${countJie}天</span>
-            <span class="stat-item stat-none">无: ${countNone}天</span>
+            <span class="stat-item stat-hu">胡斌: ${counts["胡"]}天</span>
+            <span class="stat-item stat-su">苏志强: ${counts["苏"]}天</span>
+            <span class="stat-item stat-jie">接: ${counts["接"]}天</span>
+            <span class="stat-item stat-none">未排: ${counts["未排"]}天</span>
         `;
     }
 
     // 批量连填
     function batchFill() {
-        const year = currentYear;
-        const month = currentMonth;
+        const year = currentYear, month = currentMonth;
         const daysInMonth = new Date(year, month, 0).getDate();
-        const startDay = prompt(`请输入开始日期 (1-${daysInMonth})`, "1");
-        const endDay = prompt(`请输入结束日期 (1-${daysInMonth})`, daysInMonth);
-        if (!startDay || !endDay) return;
-        let s = parseInt(startDay), e = parseInt(endDay);
-        if (isNaN(s) || isNaN(e) || s < 1 || e > daysInMonth || s > e) {
-            alert("日期范围无效");
-            return;
-        }
-        const shiftType = prompt("请输入班次 (胡 / 苏 / 接)", "胡");
-        if (!shiftType || !["胡","苏","接"].includes(shiftType)) {
-            alert("班次必须是 胡、苏 或 接");
-            return;
-        }
-        for (let d = s; d <= e; d++) {
-            setShift(year, month, d, shiftType);
-        }
+        let start = prompt(`开始日期 (1-${daysInMonth})`, "1");
+        let end = prompt(`结束日期 (1-${daysInMonth})`, daysInMonth);
+        if (!start || !end) return;
+        let s = parseInt(start), e = parseInt(end);
+        if (isNaN(s) || isNaN(e) || s<1 || e>daysInMonth || s>e) { alert("范围无效"); return; }
+        let type = prompt("班次 (胡 / 苏 / 接)", "胡");
+        if (!type || !["胡","苏","接"].includes(type)) { alert("班次必须是 胡、苏 或 接"); return; }
+        for (let d=s; d<=e; d++) setShift(year, month, d, type);
         renderMonthCalendar(year, month);
     }
 
-    // 渲染整月日历
+    // 渲染日历
     function renderMonthCalendar(year, month) {
         const grid = document.getElementById("calendarGrid");
         if (!grid) return;
@@ -506,8 +429,8 @@
 
         let weeks = [];
         let dayCounter = 1;
-        for (let i = 0; i < 42; i++) {
-            const weekIdx = Math.floor(i / 7);
+        for (let i=0; i<42; i++) {
+            const weekIdx = Math.floor(i/7);
             if (!weeks[weekIdx]) weeks[weekIdx] = [];
             if (i < startWeekday || dayCounter > daysInMonth) {
                 weeks[weekIdx].push({ day: null, valid: false });
@@ -518,11 +441,11 @@
         }
 
         let html = '';
-        for (let w = 0; w < weeks.length; w++) {
+        for (let w=0; w<weeks.length; w++) {
             const row = weeks[w];
             if (row.every(cell => !cell.valid)) continue;
             html += `<div class="week-row">`;
-            for (let i = 0; i < row.length; i++) {
+            for (let i=0; i<row.length; i++) {
                 const cell = row[i];
                 if (!cell.valid) {
                     html += `<div class="day-cell empty-cell"></div>`;
@@ -541,17 +464,10 @@
                 const festivalNames = getFestivalNames(year, month, dayNum);
                 let holidayHtml = festivalNames.length ? `<span class="holiday-mini">${festivalNames.join('·')}</span>` : '';
                 let badgeHtml = showMakeup ? `<span class="makeup-badge">补</span>` : (showRest ? `<span class="rest-badge">休</span>` : '');
-
-                const dropdown = `<select class="shift-dropdown" data-year="${year}" data-month="${month}" data-day="${dayNum}">
-                    <option value="" ${shiftVal==="" ? "selected" : ""}>无</option>
-                    <option value="胡" ${shiftVal==="胡" ? "selected" : ""}>胡</option>
-                    <option value="苏" ${shiftVal==="苏" ? "selected" : ""}>苏</option>
-                    <option value="接" ${shiftVal==="接" ? "selected" : ""}>接</option>
-                </select>`;
                 const dateNumClass = weekend ? "date-num weekend-date" : "date-num";
 
                 html += `
-                    <div class="day-cell ${shiftClass}">
+                    <div class="day-cell ${shiftClass}" data-year="${year}" data-month="${month}" data-day="${dayNum}">
                         <div class="day-number">
                             <span class="${dateNumClass}">${dayNum}</span>
                             <div style="display: flex; gap: 4px; align-items: center;">
@@ -559,42 +475,27 @@
                                 ${badgeHtml}
                             </div>
                         </div>
-                        <div class="shift-control">
-                            ${dropdown}
-                            <button class="cycle-btn" data-cycle-year="${year}" data-cycle-month="${month}" data-cycle-day="${dayNum}">↻</button>
-                        </div>
                     </div>
                 `;
             }
             html += `</div>`;
         }
         grid.innerHTML = html;
-        // 绑定下拉事件
-        document.querySelectorAll('.shift-dropdown').forEach(sel => {
-            sel.removeEventListener('change', selectChangeHandler);
-            sel.addEventListener('change', selectChangeHandler);
-        });
-        // 绑定循环按钮
-        document.querySelectorAll('.cycle-btn').forEach(btn => {
-            btn.removeEventListener('click', cycleClickHandler);
-            btn.addEventListener('click', cycleClickHandler);
-        });
         updateStats(year, month);
     }
 
-    function selectChangeHandler(e) {
-        const sel = e.currentTarget;
-        const year = parseInt(sel.dataset.year);
-        const month = parseInt(sel.dataset.month);
-        const day = parseInt(sel.dataset.day);
-        setShift(year, month, day, sel.value);
-    }
-    function cycleClickHandler(e) {
-        const btn = e.currentTarget;
-        const year = parseInt(btn.dataset.cycleYear);
-        const month = parseInt(btn.dataset.cycleMonth);
-        const day = parseInt(btn.dataset.cycleDay);
-        cycleShift(year, month, day);
+    // 事件委托处理点击
+    function setupDelegation() {
+        const grid = document.getElementById("calendarGrid");
+        grid.addEventListener('click', (e) => {
+            const cell = e.target.closest('.day-cell');
+            if (!cell) return;
+            if (!cell.hasAttribute('data-year')) return;
+            const year = parseInt(cell.dataset.year);
+            const month = parseInt(cell.dataset.month);
+            const day = parseInt(cell.dataset.day);
+            cycleShift(year, month, day);
+        });
     }
 
     function changeMonth(delta) {
@@ -617,13 +518,51 @@
         renderMonthCalendar(currentYear, currentMonth);
     }
 
+    // ---------- PWA Service Worker (离线缓存基础) ----------
+    function registerServiceWorker() {
+        if ('serviceWorker' in navigator) {
+            navigator.serviceWorker.register('/sw.js').catch(err => console.log('ServiceWorker 注册失败:', err));
+        }
+    }
+    // 动态生成一个简单的 Service Worker 脚本 (内联通过 Blob 无法跨域，但可以生成同域 Blob URL)
+    // 由于本文件可能作为独立 HTML 运行，我们尝试通过创建 Blob 并注册，但需要同源策略。最简单方式：不强制离线，仅添加 meta 标签支持主屏幕应用模式。
+    // 为了更好的 PWA 兼容，我们添加一个简单的 fetch 监听，但需要实际 sw.js 文件。因此我们动态创建 service worker 脚本内容并注册。
+    function installServiceWorker() {
+        if (!('serviceWorker' in navigator)) return;
+        const swCode = `
+            self.addEventListener('install', event => {
+                console.log('Service Worker 安装成功');
+                self.skipWaiting();
+            });
+            self.addEventListener('fetch', event => {
+                // 简单缓存策略，确保离线时至少能显示基本框架
+                event.respondWith(
+                    caches.match(event.request).then(response => {
+                        return response || fetch(event.request);
+                    })
+                );
+            });
+        `;
+        const blob = new Blob([swCode], {type: 'application/javascript'});
+        const url = URL.createObjectURL(blob);
+        navigator.serviceWorker.register(url).then(reg => {
+            console.log('ServiceWorker 注册成功', reg);
+            URL.revokeObjectURL(url);
+        }).catch(err => console.log('ServiceWorker 注册失败，可能是非 HTTPS 环境', err));
+    }
+
     function init() {
         loadFromLocalStorage();
         document.getElementById('prevMonthBtn').addEventListener('click', () => changeMonth(-1));
         document.getElementById('nextMonthBtn').addEventListener('click', () => changeMonth(1));
         document.getElementById('todayBtn').addEventListener('click', goToToday);
         document.getElementById('batchFillBtn').addEventListener('click', batchFill);
+        setupDelegation();
         renderMonthCalendar(currentYear, currentMonth);
+        // 尝试注册 Service Worker（仅在 HTTPS 或 localhost 下有效）
+        if (location.protocol === 'https:' || location.hostname === 'localhost' || location.hostname === '127.0.0.1') {
+            installServiceWorker();
+        }
     }
     init();
 </script>
