@@ -203,15 +203,15 @@
             overflow: hidden;
             text-overflow: ellipsis;
         }
-        .rest-badge, .makeup-badge {
+        .rest-badge {
             font-size: 0.6rem;
+            background: #ffb347;
+            color: #5e2e00;
             padding: 2px 7px;
             border-radius: 30px;
             font-weight: 700;
             margin-left: 4px;
         }
-        .rest-badge { background: #ffb347; color: #5e2e00; }
-        .makeup-badge { background: #ff9f7a; color: #802b00; }
         .empty-cell { background: #fbfdff; min-height: 100px; cursor: default; }
         .info-bar {
             background: #eef4fc;
@@ -255,8 +255,8 @@
     <div class="calendar-grid" id="calendarGrid"></div>
     <div class="info-bar">
         ✨ 点击任意日期格子循环切换：空白 → 胡 → 苏 → 接 → 空白，并显示名字<br>
-        📌 <span class="rest-badge">休</span> 周末/法定假 · <span class="makeup-badge">补</span> 调休补班日 · 精确节日（春节/端午/中秋）<br>
-        📦 批量连填：选择起止日期，统一设为指定班次 · 数据自动保存<br>
+        📌 <span class="rest-badge">休</span> 周末 & 法定节假日（元旦/清明/劳动/端午/中秋/国庆/春节）<br>
+        📦 批量连填：选择起止日期，统一设为指定班次 · 数据自动保存 · 左右切换月份<br>
         📱 已适配 PWA，添加到主屏幕后获得类似原生 App 体验
     </div>
 </div>
@@ -267,7 +267,7 @@
     let scheduleMap = new Map();   // key: YYYY-MM-DD, value: "胡"/"苏"/"接"/""
     let currentYear = new Date().getFullYear();
     let currentMonth = new Date().getMonth() + 1;
-    const STORAGE_KEY = "shift_pwa_click_cycle_v2";
+    const STORAGE_KEY = "shift_pwa_click_cycle_final";
 
     // 存储
     function loadFromLocalStorage() {
@@ -337,35 +337,25 @@
         if (map[year]) return { month: map[year][0], day: map[year][1] };
         return null;
     }
+
+    // 法定节假日（仅当天，不含调休连休）
     function isStatutoryHoliday(year, month, day) {
-        if (month===1 && day===1) return true;
-        if (month===5 && day===1) return true;
-        if (month===10 && day===1) return true;
+        if (month===1 && day===1) return true;          // 元旦
+        if (month===5 && day===1) return true;          // 劳动节
+        if (month===10 && day===1) return true;         // 国庆节
+        // 清明节 (4月4日或5日)
         let qm = ((year%4===0 && year%100!==0) || year%400===0) ? 4 : ((year%10===6||year%10===7)?5:4);
         if (month===4 && day===qm) return true;
         const spring = getFestivalDate(springFestivalMap, year);
-        if (spring && month===spring.month && day===spring.day) return true;
+        if (spring && month===spring.month && day===spring.day) return true;   // 春节
         const db = getFestivalDate(dragonBoatMap, year);
-        if (db && month===db.month && day===db.day) return true;
+        if (db && month===db.month && day===db.day) return true;               // 端午
         const ma = getFestivalDate(midAutumnMap, year);
-        if (ma && month===ma.month && day===ma.day) return true;
+        if (ma && month===ma.month && day===ma.day) return true;               // 中秋
         return false;
     }
-    const makeupDays = new Set([
-        "2025-04-27","2025-10-11","2026-04-26","2026-10-10","2027-04-25","2027-10-09",
-        "2028-04-29","2028-10-14","2029-04-28","2029-10-13","2030-04-27","2030-10-12",
-        "2031-04-26","2031-10-11","2032-05-01","2032-10-09","2033-04-30","2033-10-08",
-        "2034-04-29","2034-10-14","2035-04-28","2035-10-13"
-    ]);
-    function isMakeupWorkday(year, month, day) {
-        const key = `${year}-${String(month).padStart(2,'0')}-${String(day).padStart(2,'0')}`;
-        if (makeupDays.has(key)) return true;
-        if (month===10 && day>=8 && day<=12) {
-            const d = new Date(year, month-1, day);
-            if (d.getDay()===6 || d.getDay()===0) return true;
-        }
-        return false;
-    }
+
+    // 节日名称（用于小标签）
     function getFestivalNames(year, month, day) {
         const names = [];
         if (month===1 && day===1) names.push("元旦");
@@ -381,18 +371,17 @@
         if (ma && month===ma.month && day===ma.day) names.push("中秋");
         return names.slice(0,2);
     }
+
     function isWeekend(year, month, day) {
         const w = new Date(year, month-1, day).getDay();
         return w===0 || w===6;
     }
+
+    // 是否显示“休”：周末 或 法定节假日当天
     function shouldShowRest(year, month, day) {
-        if (isMakeupWorkday(year, month, day)) return false;
         if (isWeekend(year, month, day)) return true;
         if (isStatutoryHoliday(year, month, day)) return true;
         return false;
-    }
-    function shouldShowMakeup(year, month, day) {
-        return isMakeupWorkday(year, month, day);
     }
 
     // 统计
@@ -429,7 +418,7 @@
         renderMonthCalendar(year, month);
     }
 
-    // 渲染日历（增加显示名字）
+    // 渲染日历
     function renderMonthCalendar(year, month) {
         const grid = document.getElementById("calendarGrid");
         if (!grid) return;
@@ -473,13 +462,11 @@
 
                 const weekend = isWeekend(year, month, dayNum);
                 const showRest = shouldShowRest(year, month, dayNum);
-                const showMakeup = shouldShowMakeup(year, month, dayNum);
                 const festivalNames = getFestivalNames(year, month, dayNum);
                 let holidayHtml = festivalNames.length ? `<span class="holiday-mini">${festivalNames.join('·')}</span>` : '';
-                let badgeHtml = showMakeup ? `<span class="makeup-badge">补</span>` : (showRest ? `<span class="rest-badge">休</span>` : '');
+                let badgeHtml = showRest ? `<span class="rest-badge">休</span>` : '';
                 const dateNumClass = weekend ? "date-num weekend-date" : "date-num";
 
-                // 显示名字（只有非空显示）
                 const nameDisplay = shiftVal ? `<div class="shift-name">${shiftVal}</div>` : '';
 
                 html += `
@@ -535,7 +522,7 @@
         renderMonthCalendar(currentYear, currentMonth);
     }
 
-    // PWA Service Worker (可选)
+    // PWA Service Worker (简单缓存)
     function installServiceWorker() {
         if (!('serviceWorker' in navigator)) return;
         const swCode = `
