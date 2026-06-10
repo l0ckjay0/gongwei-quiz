@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=yes, viewport-fit=cover">
-    <title>排班 · 胡/苏/接 | 节假日显示“休”</title>
+    <title>排班 · 胡/苏/接 | 水平对齐下拉框</title>
     <style>
         * {
             box-sizing: border-box;
@@ -100,9 +100,12 @@
             border-bottom: 1px solid #e4edf5;
         }
         .day-cell {
+            display: flex;
+            flex-direction: column;
+            justify-content: space-between;
             padding: 8px 5px 6px;
             border-right: 1px solid #eaf0f7;
-            min-height: 94px;
+            min-height: 104px;
             transition: background 0.1s ease;
         }
         .day-cell:last-child {
@@ -177,7 +180,7 @@
             box-shadow: 0 1px 1px rgba(0,0,0,0.05);
         }
         .single-select {
-            margin-top: 5px;
+            margin-top: 0;
             width: 100%;
         }
         .shift-dropdown {
@@ -206,7 +209,7 @@
         }
         .empty-cell {
             background: #fbfdff;
-            min-height: 94px;
+            min-height: 104px;
         }
         .info-bar {
             background: #eef4fc;
@@ -220,7 +223,7 @@
         @media (max-width: 550px) {
             .date-num { width: 28px; height: 28px; font-size: 0.9rem; }
             .shift-dropdown { padding: 6px 4px; font-size: 0.7rem; }
-            .day-cell { padding: 5px 3px; min-height: 88px; }
+            .day-cell { padding: 5px 3px; min-height: 96px; }
             .holiday-mini { font-size: 0.52rem; max-width: 58px; }
             .weekdays { font-size: 0.7rem; }
             .rest-badge { font-size: 0.55rem; padding: 1px 5px; }
@@ -246,7 +249,8 @@
         <span style="background:#ffe5cc; padding:2px 6px; border-radius:20px;">接</span> 
         <span style="background:white; padding:2px 6px; border-radius:20px;">无</span><br>
         📌 周末 & 法定节假日（元旦/清明/劳动/端午/中秋/国庆/春节）旁显示「休」字，无背景高亮<br>
-        🗓️ 端午节日期已精确修正（含2026年6月19日）· 下拉切换班次自动保存 · 左右切换月份
+        🗓️ 端午节日期已精确修正（含2026年6月19日）· 下拉框底部对齐，所有“无”选项框在同一水平线上<br>
+        💾 下拉切换班次自动保存 · 左右切换月份
     </div>
 </div>
 
@@ -262,7 +266,7 @@
     let scheduleMap = new Map();
     let currentYear = new Date().getFullYear();
     let currentMonth = new Date().getMonth() + 1;
-    const STORAGE_KEY = "shift_rest_only_holiday";
+    const STORAGE_KEY = "shift_aligned_dropdown";
 
     // ---------- 本地存储 ----------
     function loadFromLocalStorage() {
@@ -287,10 +291,9 @@
     }
 
     // ---------- 精确节日数据 (端午节/中秋节/春节使用映射表+递推，确保2026年6月19日正确) ----------
-    // 端午节精确数据 (2025-2055年，手动维护关键年份，其余年份通过算法平滑)
     const dragonBoatMap = {
         2025: { month: 5, day: 31 },
-        2026: { month: 6, day: 19 },  // 用户要求修正
+        2026: { month: 6, day: 19 },
         2027: { month: 6, day: 8 },
         2028: { month: 5, day: 28 },
         2029: { month: 6, day: 16 },
@@ -321,7 +324,6 @@
         2054: { month: 6, day: 8 },
         2055: { month: 5, day: 29 }
     };
-    // 中秋节精确数据 (2025-2055)
     const midAutumnMap = {
         2025: { month: 10, day: 6 },
         2026: { month: 9, day: 26 },
@@ -355,7 +357,6 @@
         2054: { month: 9, day: 15 },
         2055: { month: 10, day: 4 }
     };
-    // 春节当天 (2025-2055)
     const springFestivalMap = {
         2025: { month: 1, day: 29 },
         2026: { month: 2, day: 17 },
@@ -392,18 +393,20 @@
 
     function getFestivalDate(map, year, defaultValue) {
         if (map[year]) return map[year];
-        // 如果超出映射范围，使用最近一年的偏移推算（简化但足够覆盖未来100年）
-        const lastYear = Math.max(...Object.keys(map).filter(k => k <= year).map(Number));
-        const firstYear = Math.min(...Object.keys(map).filter(k => k >= year).map(Number));
-        if (lastYear && firstYear) {
-            const step = (year - lastYear) / (firstYear - lastYear);
-            // 简单线性插值取整，确保端午节在5-6月，中秋在9-10月
-            let base = map[lastYear];
-            let target = map[firstYear];
-            let dayDiff = (target.day - base.day) * step;
-            let monthDiff = (target.month - base.month) * step;
-            let newMonth = base.month + Math.round(monthDiff);
-            let newDay = base.day + Math.round(dayDiff);
+        const years = Object.keys(map).map(Number).sort((a,b)=>a-b);
+        let lower = null, upper = null;
+        for (let y of years) {
+            if (y <= year) lower = y;
+            if (y >= year && upper === null) upper = y;
+        }
+        if (lower && upper && lower !== upper) {
+            const step = (year - lower) / (upper - lower);
+            const base = map[lower];
+            const target = map[upper];
+            let newMonth = base.month + (target.month - base.month) * step;
+            let newDay = base.day + (target.day - base.day) * step;
+            newMonth = Math.round(newMonth);
+            newDay = Math.round(newDay);
             if (newMonth < 5) newMonth = 5;
             if (newMonth > 6) newMonth = 6;
             if (newMonth === 5 && newDay < 20) newDay = 20;
@@ -423,16 +426,12 @@
         return getFestivalDate(springFestivalMap, year, { month: 2, day: 10 });
     }
 
-    // 判断是否为法定节假日（周末 + 法定，但周末单独处理，此处只返回是否显示“休”）
     function shouldShowRest(year, month, day) {
-        // 周末
         const w = new Date(year, month-1, day).getDay();
         if (w === 0 || w === 6) return true;
-        // 法定节假日
-        if (month === 1 && day === 1) return true;    // 元旦
-        if (month === 5 && day === 1) return true;    // 劳动节
-        if (month === 10 && day === 1) return true;   // 国庆节
-        // 清明节
+        if (month === 1 && day === 1) return true;
+        if (month === 5 && day === 1) return true;
+        if (month === 10 && day === 1) return true;
         if (month === 4) {
             let qmDay = 4;
             if ((year % 4 === 0 && year % 100 !== 0) || (year % 400 === 0)) qmDay = 4;
@@ -448,14 +447,17 @@
         return false;
     }
 
-    // 获取显示用小节日名称（仅供标签展示）
     function getFestivalNames(year, month, day) {
         const names = [];
         if (month === 1 && day === 1) names.push("元旦");
         if (month === 5 && day === 1) names.push("劳动节");
         if (month === 10 && day === 1) names.push("国庆节");
-        const qmDay = (month === 4) ? ((year % 4 === 0 && year % 100 !== 0) || (year % 400 === 0) ? 4 : ((year % 10 === 6 || year % 10 === 7) ? 5 : 4)) : null;
-        if (month === 4 && day === qmDay) names.push("清明");
+        if (month === 4) {
+            let qmDay = 4;
+            if ((year % 4 === 0 && year % 100 !== 0) || (year % 400 === 0)) qmDay = 4;
+            else qmDay = (year % 10 === 6 || year % 10 === 7) ? 5 : 4;
+            if (day === qmDay) names.push("清明");
+        }
         const db = getDragonBoat(year);
         if (month === db.month && day === db.day) names.push("端午");
         const ma = getMidAutumn(year);
@@ -470,7 +472,6 @@
         return names.slice(0, 2);
     }
 
-    // 渲染整月日历
     function renderMonthCalendar(year, month) {
         const grid = document.getElementById("calendarGrid");
         if (!grid) return;
