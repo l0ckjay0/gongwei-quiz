@@ -146,6 +146,7 @@
             min-height: 100px;
             transition: background 0.1s ease;
             cursor: default;
+            position: relative;
         }
         .day-cell:last-child { border-right: none; }
         .day-cell.shift-hu { background: #d6e6ff; }
@@ -230,13 +231,41 @@
             text-align: center;
             border-top: 1px solid #d1e2f2;
         }
-        @media (max-width: 550px) {
-            .date-num { width: 26px; height: 26px; font-size: 0.85rem; }
-            .day-cell { padding: 5px 3px; min-height: 88px; }
-            .stat-item { font-size: 0.7rem; padding: 2px 8px; }
-            .shift-name { font-size: 0.8rem; }
+
+        /* 浮动选择菜单 */
+        .staff-menu {
+            position: fixed;
+            background: white;
+            border-radius: 48px;
+            box-shadow: 0 12px 28px rgba(0,0,0,0.2);
+            display: flex;
+            gap: 12px;
+            padding: 12px 16px;
+            z-index: 1000;
+            backdrop-filter: blur(8px);
+            background: rgba(255,255,255,0.96);
+            border: 1px solid #cde3f5;
         }
-        button { font-family: inherit; }
+        .staff-menu button {
+            background: #f0f7ff;
+            border: none;
+            padding: 12px 24px;
+            border-radius: 40px;
+            font-size: 1.1rem;
+            font-weight: 600;
+            color: #1a6d9e;
+            cursor: pointer;
+            transition: 0.1s;
+            box-shadow: 0 1px 2px rgba(0,0,0,0.05);
+            font-family: inherit;
+        }
+        .staff-menu button:active {
+            transform: scale(0.96);
+            background: #cde2f5;
+        }
+        @media (max-width: 550px) {
+            .staff-menu button { padding: 10px 20px; font-size: 1rem; }
+        }
     </style>
 </head>
 <body>
@@ -262,18 +291,18 @@
     </div>
     <div class="calendar-grid" id="calendarGrid"></div>
     <div class="info-bar">
-        👆 点击日期格子中的空白区域，弹出选择框手动选择上班人员（胡 / 苏 / 胡苏）<br>
+        👆 点击日期格子中的空白区域，弹出按钮直接选择上班人员（胡 / 苏 / 胡苏）<br>
         📌 法定节假日显示标签，周末显示<span class="rest-badge">休</span><br>
         🔥 今日日期超高亮 · 📦 批量连填 · 💾 数据自动保存 · 📱 支持PWA添加到主屏幕
     </div>
 </div>
 
 <script>
-    // 配置：仅三种排班状态，无“无”选项
+    // ---------- 配置 ----------
     let scheduleMap = new Map();
     let currentYear = new Date().getFullYear();
     let currentMonth = new Date().getMonth() + 1;
-    const STORAGE_KEY = "shift_manual_no_none";
+    const STORAGE_KEY = "shift_manual_buttons";
 
     function loadFromLocalStorage() {
         const stored = localStorage.getItem(STORAGE_KEY);
@@ -291,7 +320,6 @@
     function setShift(year, month, day, value) {
         const key = `${year}-${String(month).padStart(2,'0')}-${String(day).padStart(2,'0')}`;
         if (!value || !["胡","苏","胡苏"].includes(value)) {
-            // 如果传入无效值，则删除（表示空白）
             scheduleMap.delete(key);
         } else {
             scheduleMap.set(key, value);
@@ -300,20 +328,50 @@
         renderMonthCalendar(currentYear, currentMonth);
     }
 
-    function promptShiftChoice(year, month, day) {
-        let msg = "请选择上班人员：\n1 - 胡\n2 - 苏\n3 - 胡苏";
-        let input = prompt(msg, "1");
-        if (input === null) return;
-        let choice = input.trim();
-        let newValue = "";
-        if (choice === "1") newValue = "胡";
-        else if (choice === "2") newValue = "苏";
-        else if (choice === "3") newValue = "胡苏";
-        else {
-            alert("无效输入，请输入 1、2 或 3");
-            return;
+    // 浮动菜单
+    let activeMenu = null;
+    function showStaffMenu(x, y, year, month, day) {
+        if (activeMenu) activeMenu.remove();
+        const menu = document.createElement('div');
+        menu.className = 'staff-menu';
+        menu.style.left = x + 'px';
+        menu.style.top = y + 'px';
+        const btnHu = document.createElement('button');
+        btnHu.textContent = '胡';
+        btnHu.onclick = () => { setShift(year, month, day, '胡'); closeMenu(); };
+        const btnSu = document.createElement('button');
+        btnSu.textContent = '苏';
+        btnSu.onclick = () => { setShift(year, month, day, '苏'); closeMenu(); };
+        const btnHuSu = document.createElement('button');
+        btnHuSu.textContent = '胡苏';
+        btnHuSu.onclick = () => { setShift(year, month, day, '胡苏'); closeMenu(); };
+        menu.appendChild(btnHu);
+        menu.appendChild(btnSu);
+        menu.appendChild(btnHuSu);
+        document.body.appendChild(menu);
+        activeMenu = menu;
+
+        // 边界检测，防止超出屏幕右边缘
+        const rect = menu.getBoundingClientRect();
+        if (rect.right > window.innerWidth) {
+            menu.style.left = (window.innerWidth - rect.width - 10) + 'px';
         }
-        setShift(year, month, day, newValue);
+        if (rect.bottom > window.innerHeight) {
+            menu.style.top = (window.innerHeight - rect.height - 10) + 'px';
+        }
+
+        function closeMenu() {
+            if (activeMenu) activeMenu.remove();
+            activeMenu = null;
+        }
+        // 点击其他区域关闭
+        const closeHandler = (e) => {
+            if (!menu.contains(e.target)) {
+                closeMenu();
+                document.removeEventListener('click', closeHandler);
+            }
+        };
+        setTimeout(() => document.addEventListener('click', closeHandler), 0);
     }
 
     // 节日映射 (精确数据，仅展示标签)
@@ -481,7 +539,10 @@
             const month = parseInt(cell.dataset.month);
             const day = parseInt(cell.dataset.day);
             if (isNaN(year) || isNaN(month) || isNaN(day)) return;
-            promptShiftChoice(year, month, day);
+            const rect = zone.getBoundingClientRect();
+            const x = rect.left + window.scrollX;
+            const y = rect.bottom + window.scrollY;
+            showStaffMenu(x, y, year, month, day);
         });
     }
     function changeMonth(delta) {
