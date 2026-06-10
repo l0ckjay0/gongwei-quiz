@@ -180,6 +180,15 @@
             color: #07456a;
             border-color: #9bc1e0;
         }
+        /* 今日日期超高亮 */
+        .today-highlight {
+            background: linear-gradient(145deg, #f9b81b, #ff8c00);
+            color: white !important;
+            border: 1px solid #ffb347;
+            box-shadow: 0 0 0 3px rgba(255, 140, 0, 0.4), 0 3px 8px rgba(0,0,0,0.2);
+            font-weight: 900;
+            transform: scale(1.02);
+        }
         .shift-name {
             font-size: 0.95rem;
             font-weight: 700;
@@ -253,6 +262,7 @@
     <div class="info-bar">
         ✨ 点击任意日期格子循环切换：空白 → 胡 → 苏 → 接 → 空白，并显示名字<br>
         📌 法定节假日（元旦/清明/劳动/端午/中秋/国庆/春节）显示标签，周末显示<span class="rest-badge">休</span><br>
+        🔥 今日日期<span style="background:#f9b81b; color:white; padding:2px 6px; border-radius:30px;">超高亮</span><br>
         📦 批量连填：选择起止日期，统一设为指定班次 · 数据自动保存 · 左右切换月份<br>
         📱 已适配 PWA，添加到主屏幕后获得类似原生 App 体验
     </div>
@@ -264,7 +274,7 @@
     let scheduleMap = new Map();   // key: YYYY-MM-DD, value: "胡"/"苏"/"接"/""
     let currentYear = new Date().getFullYear();
     let currentMonth = new Date().getMonth() + 1;
-    const STORAGE_KEY = "shift_holiday_weekend";
+    const STORAGE_KEY = "shift_holiday_weekend_today";
 
     // 存储
     function loadFromLocalStorage() {
@@ -392,7 +402,7 @@
         renderMonthCalendar(year, month);
     }
 
-    // 渲染日历
+    // 渲染日历（今日超高亮）
     function renderMonthCalendar(year, month) {
         const grid = document.getElementById("calendarGrid");
         if (!grid) return;
@@ -402,6 +412,12 @@
         const firstDay = new Date(year, month-1, 1);
         const startWeekday = firstDay.getDay();
         const daysInMonth = new Date(year, month, 0).getDate();
+
+        // 获取今天的日期（用于高亮）
+        const today = new Date();
+        const todayYear = today.getFullYear();
+        const todayMonth = today.getMonth() + 1;
+        const todayDay = today.getDate();
 
         let weeks = [];
         let dayCounter = 1;
@@ -438,7 +454,12 @@
                 const festivalNames = getFestivalNames(year, month, dayNum);
                 let holidayHtml = festivalNames.length ? `<span class="holiday-mini">${festivalNames.join('·')}</span>` : '';
                 const showRest = weekend;
-                const dateNumClass = weekend ? "date-num weekend-date" : "date-num";
+                let dateNumClass = weekend ? "date-num weekend-date" : "date-num";
+                // 今日高亮判断
+                const isToday = (year === todayYear && month === todayMonth && dayNum === todayDay);
+                if (isToday) {
+                    dateNumClass += " today-highlight";
+                }
                 const badgeHtml = showRest ? `<span class="rest-badge">休</span>` : '';
                 const nameDisplay = shiftVal ? `<div class="shift-name">${shiftVal}</div>` : '';
 
