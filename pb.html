@@ -180,6 +180,18 @@
             color: #07456a;
             border-color: #9bc1e0;
         }
+        .shift-name {
+            font-size: 0.95rem;
+            font-weight: 700;
+            text-align: center;
+            margin-top: 4px;
+            background: rgba(255,255,240,0.7);
+            border-radius: 20px;
+            padding: 3px 0;
+        }
+        .shift-name:empty {
+            display: none;
+        }
         .holiday-mini {
             font-size: 0.58rem;
             background: #eef3fc;
@@ -213,6 +225,7 @@
             .date-num { width: 26px; height: 26px; font-size: 0.85rem; }
             .day-cell { padding: 5px 3px; min-height: 88px; }
             .stat-item { font-size: 0.7rem; padding: 2px 8px; }
+            .shift-name { font-size: 0.8rem; }
         }
         button { font-family: inherit; }
     </style>
@@ -241,7 +254,7 @@
     </div>
     <div class="calendar-grid" id="calendarGrid"></div>
     <div class="info-bar">
-        ✨ 点击任意日期格子循环切换：空白 → 胡 → 苏 → 接 → 空白<br>
+        ✨ 点击任意日期格子循环切换：空白 → 胡 → 苏 → 接 → 空白，并显示名字<br>
         📌 <span class="rest-badge">休</span> 周末/法定假 · <span class="makeup-badge">补</span> 调休补班日 · 精确节日（春节/端午/中秋）<br>
         📦 批量连填：选择起止日期，统一设为指定班次 · 数据自动保存<br>
         📱 已适配 PWA，添加到主屏幕后获得类似原生 App 体验
@@ -254,7 +267,7 @@
     let scheduleMap = new Map();   // key: YYYY-MM-DD, value: "胡"/"苏"/"接"/""
     let currentYear = new Date().getFullYear();
     let currentMonth = new Date().getMonth() + 1;
-    const STORAGE_KEY = "shift_pwa_click_cycle";
+    const STORAGE_KEY = "shift_pwa_click_cycle_v2";
 
     // 存储
     function loadFromLocalStorage() {
@@ -416,7 +429,7 @@
         renderMonthCalendar(year, month);
     }
 
-    // 渲染日历
+    // 渲染日历（增加显示名字）
     function renderMonthCalendar(year, month) {
         const grid = document.getElementById("calendarGrid");
         if (!grid) return;
@@ -466,6 +479,9 @@
                 let badgeHtml = showMakeup ? `<span class="makeup-badge">补</span>` : (showRest ? `<span class="rest-badge">休</span>` : '');
                 const dateNumClass = weekend ? "date-num weekend-date" : "date-num";
 
+                // 显示名字（只有非空显示）
+                const nameDisplay = shiftVal ? `<div class="shift-name">${shiftVal}</div>` : '';
+
                 html += `
                     <div class="day-cell ${shiftClass}" data-year="${year}" data-month="${month}" data-day="${dayNum}">
                         <div class="day-number">
@@ -475,6 +491,7 @@
                                 ${badgeHtml}
                             </div>
                         </div>
+                        ${nameDisplay}
                     </div>
                 `;
             }
@@ -518,15 +535,7 @@
         renderMonthCalendar(currentYear, currentMonth);
     }
 
-    // ---------- PWA Service Worker (离线缓存基础) ----------
-    function registerServiceWorker() {
-        if ('serviceWorker' in navigator) {
-            navigator.serviceWorker.register('/sw.js').catch(err => console.log('ServiceWorker 注册失败:', err));
-        }
-    }
-    // 动态生成一个简单的 Service Worker 脚本 (内联通过 Blob 无法跨域，但可以生成同域 Blob URL)
-    // 由于本文件可能作为独立 HTML 运行，我们尝试通过创建 Blob 并注册，但需要同源策略。最简单方式：不强制离线，仅添加 meta 标签支持主屏幕应用模式。
-    // 为了更好的 PWA 兼容，我们添加一个简单的 fetch 监听，但需要实际 sw.js 文件。因此我们动态创建 service worker 脚本内容并注册。
+    // PWA Service Worker (可选)
     function installServiceWorker() {
         if (!('serviceWorker' in navigator)) return;
         const swCode = `
@@ -535,7 +544,6 @@
                 self.skipWaiting();
             });
             self.addEventListener('fetch', event => {
-                // 简单缓存策略，确保离线时至少能显示基本框架
                 event.respondWith(
                     caches.match(event.request).then(response => {
                         return response || fetch(event.request);
@@ -559,7 +567,6 @@
         document.getElementById('batchFillBtn').addEventListener('click', batchFill);
         setupDelegation();
         renderMonthCalendar(currentYear, currentMonth);
-        // 尝试注册 Service Worker（仅在 HTTPS 或 localhost 下有效）
         if (location.protocol === 'https:' || location.hostname === 'localhost' || location.hostname === '127.0.0.1') {
             installServiceWorker();
         }
