@@ -1,0 +1,407 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=yes">
+    <title>题库搜索</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Helvetica, Arial, sans-serif;
+            background: #f5f7fb;
+            min-height: 100vh;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: flex-start;
+            padding: 1rem 1rem 2rem;
+        }
+
+        .main-center {
+            flex: 1;
+            width: 100%;
+            max-width: 780px;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+        }
+
+        .search-section {
+            width: 100%;
+            background: transparent;
+            margin: 0.5rem 0 1rem 0;
+        }
+
+        .search-wrapper {
+            position: relative;
+            width: 100%;
+            max-width: 600px;
+            margin: 0 auto;
+            border-radius: 48px;
+            background: white;
+            box-shadow: 0 8px 20px rgba(0, 0, 0, 0.05), 0 2px 6px rgba(0, 0, 0, 0.02);
+            transition: box-shadow 0.2s, transform 0.2s;
+        }
+
+        .search-wrapper:focus-within {
+            box-shadow: 0 12px 28px rgba(0, 0, 0, 0.1);
+            transform: scale(1.01);
+        }
+
+        #searchBox {
+            width: 100%;
+            padding: 0.9rem 3rem 0.9rem 3rem;  /* 左右都为按钮留出空间 */
+            font-size: 1.05rem;
+            border: 1px solid #e2e8f0;
+            border-radius: 48px;
+            background: #ffffff;
+            outline: none;
+            transition: all 0.2s;
+            color: #1e293b;
+            font-weight: 500;
+        }
+
+        #searchBox:focus {
+            border-color: #3b82f6;
+            box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.15);
+        }
+
+        #searchBox[readonly] {
+            background-color: #ffffff;
+            cursor: pointer;
+            color: #334155;
+        }
+
+        #searchBox[readonly]::placeholder {
+            color: transparent;
+        }
+
+        /* 左右清除按钮共用样式 */
+        .clear-btn {
+            position: absolute;
+            top: 50%;
+            transform: translateY(-50%);
+            cursor: pointer;
+            font-size: 1.6rem;
+            font-weight: 300;
+            color: #94a3b8;
+            user-select: none;
+            width: 28px;
+            height: 28px;
+            line-height: 26px;
+            text-align: center;
+            border-radius: 50%;
+            background: #f1f5f9;
+            transition: all 0.2s;
+            display: none;  /* 默认隐藏，有文字时才显示 */
+        }
+
+        .clear-btn:hover {
+            background: #e2e8f0;
+            color: #1e293b;
+        }
+
+        /* 右侧清除按钮 */
+        .clear-right {
+            right: 1rem;
+        }
+
+        /* 左侧清除按钮 */
+        .clear-left {
+            left: 1rem;
+        }
+
+        #results {
+            width: 100%;
+            margin-top: 1.5rem;
+            display: flex;
+            flex-direction: column;
+            gap: 0.9rem;
+        }
+
+        .item {
+            background: #ffffff;
+            padding: 1rem 1.2rem;
+            border-radius: 20px;
+            box-shadow: 0 2px 8px rgba(0, 0, 0, 0.03), 0 1px 2px rgba(0, 0, 0, 0.05);
+            transition: all 0.2s;
+            border: 1px solid #edf2f7;
+        }
+
+        .item:hover {
+            border-color: #cbd5e1;
+            box-shadow: 0 8px 20px rgba(0, 0, 0, 0.05);
+        }
+
+        .question {
+            font-weight: 650;
+            font-size: 1rem;
+            margin-bottom: 0.6rem;
+            color: #0f172a;
+            line-height: 1.4;
+        }
+
+        .options div {
+            margin-left: 1.25rem;
+            margin-bottom: 0.25rem;
+            color: #334155;
+            font-size: 0.95rem;
+        }
+
+        /* 答案：黑色 */
+        .answer {
+            color: #000000;
+            font-weight: 600;
+            margin-top: 0.5rem;
+            font-size: 0.9rem;
+            background: #fff1f2;
+            display: inline-block;
+            padding: 0.2rem 0.8rem;
+            border-radius: 30px;
+        }
+
+        .empty-tip {
+            display: none;
+        }
+
+        @media (prefers-color-scheme: dark) {
+            body {
+                background: #121826;
+            }
+            .search-wrapper {
+                background: #1e293b;
+                box-shadow: 0 8px 20px rgba(0, 0, 0, 0.3);
+            }
+            #searchBox {
+                background: #1e293b;
+                border-color: #334155;
+                color: #e2e8f0;
+            }
+            #searchBox[readonly] {
+                background-color: #1e293b;
+                color: #e2e8f0;
+            }
+            #searchBox[readonly]::placeholder {
+                color: transparent;
+            }
+            #searchBox:focus {
+                border-color: #60a5fa;
+                box-shadow: 0 0 0 3px rgba(96, 165, 250, 0.2);
+            }
+            .clear-btn {
+                background: #334155;
+                color: #cbd5e1;
+            }
+            .clear-btn:hover {
+                background: #475569;
+                color: #f1f5f9;
+            }
+            .item {
+                background: #1e293b;
+                border-color: #334155;
+                box-shadow: none;
+            }
+            .question {
+                color: #f1f5f9;
+            }
+            .options div {
+                color: #cbd5e6;
+            }
+            .answer {
+                color: #ffffff;
+                background: #3b1e2c;
+            }
+        }
+    </style>
+</head>
+<body>
+<div class="main-center">
+    <div class="search-section">
+        <div class="search-wrapper">
+            <input type="text" id="searchBox" placeholder="" autocomplete="off" readonly>
+            <!-- 左侧清除按钮 -->
+            <span class="clear-btn clear-left" title="清空">✕</span>
+            <!-- 右侧清除按钮 -->
+            <span class="clear-btn clear-right" title="清空">✕</span>
+        </div>
+    </div>
+    <div id="results"></div>
+</div>
+
+<script>
+    // 题库数据（示例，实际可替换为完整 2875 条）
+    const questionBank = [
+        {
+            "id": 1,
+            "question": "我国于2009年启动实施国家基本公共卫生服务项目。 （ ）",
+            "options": ["A. 正确","B. 错误"],
+            "answer": "正确",
+            "type": "truefalse"
+        },
+        {
+            "id": 2,
+            "question": "实施国家基本公共卫生服务项目是新中国成立70余年来覆盖范围最大、受益人群最广的一项公共卫生干预策略。 （ ）",
+            "options": ["A. 正确","B. 错误"],
+            "answer": "正确",
+            "type": "truefalse"
+        },
+        {
+            "id": 3,
+            "question": "居民健康档案管理的服务对象是辖区内常住居民，包括居住半年以上的户籍及非户籍居民。 （ ）",
+            "options": ["A. 正确","B. 错误"],
+            "answer": "正确",
+            "type": "truefalse"
+        },
+        {
+            "id": 4,
+            "question": "健康教育服务中，开展健康知识讲座每年至少需要举办多少场次？",
+            "options": ["A. 6次", "B. 8次", "C. 10次", "D. 12次"],
+            "answer": "D. 12次",
+            "type": "choice"
+        },
+        {
+            "id": 5,
+            "question": "预防接种服务中，0-6岁儿童建立预防接种证和接种卡的比例应该达到？",
+            "options": ["A. ≥85%", "B. ≥90%", "C. ≥95%", "D. 100%"],
+            "answer": "C. ≥95%",
+            "type": "choice"
+        }
+    ];
+
+    const searchInput = document.getElementById('searchBox');
+    const leftClear = document.querySelector('.clear-left');
+    const rightClear = document.querySelector('.clear-right');
+    const resultsContainer = document.getElementById('results');
+
+    // 第一次点击不弹出键盘逻辑
+    let isReadonlyRemoved = false;
+    searchInput.setAttribute('readonly', 'readonly');
+    searchInput.style.cursor = 'pointer';
+
+    const handleFirstActivation = () => {
+        if (isReadonlyRemoved) return;
+        searchInput.removeAttribute('readonly');
+        searchInput.style.cursor = 'text';
+        isReadonlyRemoved = true;
+        performSearch();
+    };
+    searchInput.addEventListener('click', handleFirstActivation);
+    searchInput.addEventListener('touchstart', handleFirstActivation, { passive: true });
+
+    function normalize(str) {
+        if (str === undefined || str === null) return '';
+        return String(str)
+            .replace(/[\u3000]/g, ' ')
+            .replace(/[！!]/g, '!')
+            .replace(/[，,]/g, ',')
+            .replace(/[。．]/g, '.')
+            .replace(/\s+/g, ' ')
+            .trim()
+            .toLowerCase();
+    }
+
+    function renderList(items) {
+        resultsContainer.innerHTML = '';
+        if (!items || items.length === 0) return;
+        const fragment = document.createDocumentFragment();
+        items.forEach(item => {
+            const card = document.createElement('div');
+            card.className = 'item';
+            const questionDiv = document.createElement('div');
+            questionDiv.className = 'question';
+            questionDiv.textContent = `${item.id}. ${item.question}`;
+            card.appendChild(questionDiv);
+            if (item.options && Array.isArray(item.options) && item.options.length) {
+                const optionsDiv = document.createElement('div');
+                optionsDiv.className = 'options';
+                item.options.forEach(opt => {
+                    const optLine = document.createElement('div');
+                    optLine.textContent = opt;
+                    optionsDiv.appendChild(optLine);
+                });
+                card.appendChild(optionsDiv);
+            }
+            const answerDiv = document.createElement('div');
+            answerDiv.className = 'answer';
+            answerDiv.textContent = `✔ 答案：${item.answer}`;
+            card.appendChild(answerDiv);
+            fragment.appendChild(card);
+        });
+        resultsContainer.appendChild(fragment);
+    }
+
+    function performSearch() {
+        let rawKeyword = searchInput.value;
+        if (!isReadonlyRemoved && rawKeyword === '') {
+            renderList([]);
+            return;
+        }
+        const kw = normalize(rawKeyword);
+        if (!kw) {
+            renderList([]);
+            return;
+        }
+        const filtered = questionBank.filter(item => {
+            if (item.question && normalize(item.question).includes(kw)) return true;
+            if (item.options && item.options.some(opt => normalize(opt).includes(kw))) return true;
+            if (item.answer && normalize(item.answer).includes(kw)) return true;
+            if (String(item.id).includes(kw)) return true;
+            return false;
+        });
+        renderList(filtered);
+    }
+
+    let debounceTimer = null;
+    const handleInput = () => {
+        const hasValue = searchInput.value.length > 0;
+        // 左右按钮同时显示或隐藏
+        leftClear.style.display = hasValue ? 'inline-block' : 'none';
+        rightClear.style.display = hasValue ? 'inline-block' : 'none';
+        if (debounceTimer) clearTimeout(debounceTimer);
+        debounceTimer = setTimeout(() => {
+            performSearch();
+        }, 280);
+    };
+
+    // 清空函数（供两个按钮复用）
+    const clearSearch = () => {
+        searchInput.value = '';
+        leftClear.style.display = 'none';
+        rightClear.style.display = 'none';
+        renderList([]);
+        if (isReadonlyRemoved) searchInput.focus();
+        performSearch();
+    };
+
+    searchInput.addEventListener('input', handleInput);
+    searchInput.addEventListener('keypress', (e) => {
+        if (e.key === 'Enter') {
+            e.preventDefault();
+            if (debounceTimer) clearTimeout(debounceTimer);
+            performSearch();
+        }
+    });
+
+    leftClear.addEventListener('click', (e) => {
+        e.stopPropagation();
+        clearSearch();
+    });
+    rightClear.addEventListener('click', (e) => {
+        e.stopPropagation();
+        clearSearch();
+    });
+
+    // 初始化按钮隐藏
+    leftClear.style.display = 'none';
+    rightClear.style.display = 'none';
+
+    // 初始渲染空
+    renderList([]);
+</script>
+</body>
+</html>
